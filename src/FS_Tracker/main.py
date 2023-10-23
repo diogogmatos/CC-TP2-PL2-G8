@@ -1,13 +1,24 @@
 import socket  # to send via tcp
 import pickle  # to serialize objects into bytes
+import signal  # to handle signals
+import sys  # to exit gracefully
 
 # import TCPombo protocol
-from ..protocols.TCPombo.TCPombo import TCPombo
+from src.protocols.TCPombo.TCPombo import TCPombo
 
 # TODO: usar sinais para encerrar "graciosamente" o servidor
 
 
 def main():
+    # define a signal handler function
+    def signal_handler(sig, frame):
+        if (sig == 2):
+            print("\b\b  \nReceived exit signal. Flying away...")
+            sys.exit(0)
+
+    # register the signal handler for SIGINT (Ctrl+C)
+    signal.signal(signal.SIGINT, signal_handler)
+
     # set server ip
     TCP_IP = socket.gethostbyname(socket.gethostname())
     TCP_PORT = 9090
@@ -52,7 +63,7 @@ def main():
             # send response message
             response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
             conn.send(pickle.dumps(
-                TCPombo(True, False, False, -1, len(response), response)))
+                TCPombo(True, False, len(response), response)))
 
         # close connection (unreachable for now)
         conn.close()

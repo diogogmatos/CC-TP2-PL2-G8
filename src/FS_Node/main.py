@@ -3,7 +3,7 @@ import socket  # to send via tcp
 import pickle  # to serialize objects into bytes
 
 # import TCPombo protocol
-from ..protocols.TCPombo.TCPombo import TCPombo
+from src.protocols.TCPombo.TCPombo import TCPombo
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
 
     # set message to send
     string = "Hello World!"
-    m = TCPombo(True, False, False, -1, len(string), string)
+    m = TCPombo(True, False, len(string), string)
     # serialize message into bytes with pickle.dumps()
     MESSAGE = pickle.dumps(m)
 
