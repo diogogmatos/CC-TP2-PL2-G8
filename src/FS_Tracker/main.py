@@ -2,11 +2,40 @@ import socket  # to send via tcp
 import pickle  # to serialize objects into bytes
 import signal  # to handle signals
 import sys  # to exit gracefully
+import threading  # to
 
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
-# TODO: usar sinais para encerrar "graciosamente" o servidor
+# TODO: criar um novo socket para cada cliente, enviando a nova porta para o cliente se conectar
+
+def handleNode(conn, addr, BUFFER_SIZE):
+    # connection established print
+    print("\nTCPombo Connection with Client @",
+          addr[0] + ":" + str(addr[1]))
+    
+    run = True
+    while run:
+        # receive message
+        data = conn.recv(BUFFER_SIZE)
+
+        # if data was actually received
+        if data:
+            # decode binary data with pickle.loads()
+            tcpombo: TCPombo = pickle.loads(data)
+
+            if tcpombo.getData() == "disconnect":
+                run = False
+
+            # print data
+            print(tcpombo)  # print protocol message
+            print("Data:", tcpombo.getData())  # print transported data
+
+            # send response message
+            response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
+            conn.send(pickle.dumps(TCPombo.createChirp(response)))
+
+    conn.close()
 
 
 def main():
@@ -29,7 +58,7 @@ def main():
     # listen for connections with the server
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((TCP_IP, TCP_PORT))
-    s.listen(1)
+    s.listen(5)  # 5 = max number of pending connections
 
     # server active print
     print("  ww")
@@ -44,29 +73,9 @@ def main():
         # accept connection
         conn, addr = s.accept()
 
-        # connection established print
-        print("\nTCPombo Connection with Client @",
-              addr[0] + ":" + str(addr[1]))
-
-        # receive message
-        data = conn.recv(BUFFER_SIZE)
-
-        # if data was actually received
-        if data:
-            # decode binary data with pickle.loads()
-            tcpombo: TCPombo = pickle.loads(data)
-
-            # print data
-            print(tcpombo)  # print protocol message
-            print("Data:", tcpombo.getData())  # print transported data
-
-            # send response message
-            response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
-            conn.send(pickle.dumps(
-                TCPombo(True, False, len(response), response)))
-
-        # close connection (unreachable for now)
-        conn.close()
+        # start a new thread to handle the connection
+        threading.Thread(target=handleNode, args=(
+            conn, addr, BUFFER_SIZE,)).start()
 
 
 main()

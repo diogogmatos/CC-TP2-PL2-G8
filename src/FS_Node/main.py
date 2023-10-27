@@ -21,9 +21,11 @@ def main():
     # set buffer size
     BUFFER_SIZE = 1024
 
+    # TODO: fazer fase de conexão inicial onde o servidor envia como resposta uma nova porta à qual o cliente se deve conectar
+
     # set message to send
     string = "Hello World!"
-    m = TCPombo(True, False, len(string), string)
+    m = TCPombo.createChirp(string)
     # serialize message into bytes with pickle.dumps()
     MESSAGE = pickle.dumps(m)
 

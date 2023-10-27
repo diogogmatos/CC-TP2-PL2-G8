@@ -1,3 +1,5 @@
+import pickle
+
 from ..utils import ordinalSuffix
 
 # TODO: make methods: createChirp(), createCall()
@@ -14,13 +16,26 @@ class TCPombo:
     - data: used to carry messages between client and server
     """
 
-    def __init__(self, chirp: bool, call: bool, length: int, data):
+    def __init__(self, chirp: bool, call: bool, length: int, data: bytes):
         self.chirp = chirp
         self.call = call
         self.length = length
         self.data = data
 
-    # get & set
+   # create a chirp or call
+
+    @staticmethod
+    def createChirp(data):
+        d: bytes = pickle.dumps(data)  # serialize data into bytes
+        return TCPombo(True, False, len(d), d)
+
+    @staticmethod
+    def createCall(data):
+        d: bytes = pickle.dumps(data)  # serialize data into bytes
+        return TCPombo(False, True, len(d), d)
+
+    # get's & set's
+
     def isChirp(self):
         return self.chirp
 
@@ -31,7 +46,8 @@ class TCPombo:
         return self.length
 
     def getData(self):
-        return self.data
+        # deserialize data from bytes and return
+        return pickle.loads(self.data)
 
     # to string
     def __str__(self):
