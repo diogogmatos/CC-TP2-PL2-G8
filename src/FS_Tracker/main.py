@@ -7,13 +7,39 @@ import threading  # to
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
-# TODO: criar um novo socket para cada cliente, enviando a nova porta para o cliente se conectar
+# TODO:
+# - make the tracker actually receive and store information about what files each node has available
 
-def handleNode(conn, addr, BUFFER_SIZE):
+def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
+    # establishing connection print
+    print("\nEstablishing TCPombo Connection with Client @",
+          inicialClientAddr[0], "...")
+
+    # create new socket to communicate with client
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((TCP_IP, 0))
+    _, newPort = s.getsockname()
+
+    # send new port to client
+    inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort)))
+
+    # close connection
+    inicialConn.close()
+
+    # wait for client to connect to new port
+    s.listen(1)  # only 1 client can connect to this socket
+
+    # waiting for connection print
+    print("Listening for connection on port:", newPort, "...")
+
+    # accept connection
+    conn, addr = s.accept()
+
     # connection established print
-    print("\nTCPombo Connection with Client @",
+    print("Established TCPombo Connection with Client @",
           addr[0] + ":" + str(addr[1]))
-    
+
+    # listen for messages from client
     run = True
     while run:
         # receive message
@@ -24,18 +50,25 @@ def handleNode(conn, addr, BUFFER_SIZE):
             # decode binary data with pickle.loads()
             tcpombo: TCPombo = pickle.loads(data)
 
-            if tcpombo.getData() == "disconnect":
+            # check if client wants to disconnect
+            if tcpombo.getData() == "quit":
+                # disconnect print
+                print("\nClient @", addr[0] + ":" + str(addr[1]), "disconnected.")
                 run = False
+            else:
+                # print data
+                print()
+                print(addr[0], ":", tcpombo)  # print protocol message
+                print("Data:", tcpombo.getData())  # print transported data
 
-            # print data
-            print(tcpombo)  # print protocol message
-            print("Data:", tcpombo.getData())  # print transported data
+                # send response message
+                response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
+                conn.send(pickle.dumps(TCPombo.createChirp(response)))
 
-            # send response message
-            response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
-            conn.send(pickle.dumps(TCPombo.createChirp(response)))
-
+    # close connection
     conn.close()
+    # close socket
+    s.close()
 
 
 def main():
@@ -75,7 +108,6 @@ def main():
 
         # start a new thread to handle the connection
         threading.Thread(target=handleNode, args=(
-            conn, addr, BUFFER_SIZE,)).start()
-
+            conn, addr, BUFFER_SIZE, TCP_IP)).start()
 
 main()
