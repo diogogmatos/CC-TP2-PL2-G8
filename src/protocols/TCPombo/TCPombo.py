@@ -26,14 +26,14 @@ class TCPombo:
     # create a chirp or call
 
     @staticmethod
-    def createChirp(data, kiss:bool):
+    def createChirp(data, kiss=False):
         d: bytes = pickle.dumps(data)  # serialize data into bytes
         return TCPombo(True, kiss, len(d), d)
 
     @staticmethod
     def createCall(data, kiss=False):
         d: bytes = pickle.dumps(data)  # serialize data into bytes
-        return TCPombo(False, False, len(d), d)
+        return TCPombo(False, kiss, len(d), d)
 
       
     # get's & set's

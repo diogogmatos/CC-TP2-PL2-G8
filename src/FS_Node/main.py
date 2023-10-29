@@ -11,7 +11,7 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 # - fazer o node ser um servidor udp
 
 
-def connect_Server(TCP_IP:int , TCP_PORT:int, BUFFER_SIZE:int)->socket._RetAddress:
+def connectServer(TCP_IP:int , TCP_PORT:int, BUFFER_SIZE:int)->socket._RetAddress:
     s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s1.connect((TCP_IP, TCP_PORT))
