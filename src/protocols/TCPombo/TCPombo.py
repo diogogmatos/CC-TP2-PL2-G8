@@ -8,39 +8,35 @@ from ..utils import ordinalSuffix
 class TCPombo:
     """
     ### TCPombo Protocol
-    - chirp: flag used to send a chirp, i.e. used to communicate information
-    - call: flag used to send a call, i.e. used to request information
+    - chirp: flag used to send a chirp or a call, i.e. used to communicate information or request information
+    - kiss: flag used to identify a connection message
     - flock (old): flag used to identify a flock, i.e. to identify a piece of a message that was divided in smaller segments
     - pigeon(old): used to track the segments of a message in a flock, i.e. the segment number
     - length: used to carry the length of the segment in bytes
     - data: used to carry messages between client and server
     """
 
-    def __init__(self, chirp: bool, call: bool, length: int, data: bytes):
+    def __init__(self, chirp: bool, kiss: bool, length: int, data: bytes):
         self.chirp = chirp
-        self.call = call
         self.length = length
         self.data = data
 
-   # create a chirp or call
+    # create a chirp or call
 
     @staticmethod
-    def createChirp(data):
+    def createChirp(data, kiss=False):
         d: bytes = pickle.dumps(data)  # serialize data into bytes
-        return TCPombo(True, False, len(d), d)
+        return TCPombo(True, kiss, len(d), d)
 
     @staticmethod
-    def createCall(data):
+    def createCall(data, kiss=False):
         d: bytes = pickle.dumps(data)  # serialize data into bytes
-        return TCPombo(False, True, len(d), d)
+        return TCPombo(False, kiss, len(d), d)
 
     # get's & set's
 
     def isChirp(self):
         return self.chirp
-
-    def isCall(self):
-        return self.call
 
     def getLength(self):
         return self.length
@@ -54,7 +50,7 @@ class TCPombo:
         r = ""
         if self.chirp:
             r += "('> Chirp! "
-        if self.call:
+        else:
             r += "('> Call! "
         r += "Here's " + str(self.length) + " bytes of data!"
         return r

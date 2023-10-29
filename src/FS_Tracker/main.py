@@ -10,6 +10,7 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 # TODO:
 # - make the tracker actually receive and store information about what files each node has available
 
+
 def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
     # establishing connection print
     print("\nEstablishing TCPombo Connection with Client @",
@@ -21,7 +22,7 @@ def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
     _, newPort = s.getsockname()
 
     # send new port to client
-    inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort)))
+    inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort, True)))
 
     # close connection
     inicialConn.close()
@@ -53,7 +54,8 @@ def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
             # check if client wants to disconnect
             if tcpombo.getData() == "quit":
                 # disconnect print
-                print("\nClient @", addr[0] + ":" + str(addr[1]), "disconnected.")
+                print("\nClient @", addr[0] + ":" +
+                      str(addr[1]), "disconnected.")
                 run = False
             else:
                 # print data
@@ -109,5 +111,6 @@ def main():
         # start a new thread to handle the connection
         threading.Thread(target=handleNode, args=(
             conn, addr, BUFFER_SIZE, TCP_IP)).start()
+
 
 main()
