@@ -22,7 +22,8 @@ def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
     _, newPort = s.getsockname()
 
     # send new port to client
-    inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort, True)))
+
+    inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort,True)))
 
     # close connection
     inicialConn.close()
