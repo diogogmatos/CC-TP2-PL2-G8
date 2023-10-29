@@ -9,19 +9,17 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 
 # TODO:
 # - make the tracker actually receive and store information about what files each node has available
+# - modularize the connection handling code
 
 
 def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
-    # establishing connection print
-    print("\nEstablishing TCPombo Connection with Client @",
-          inicialClientAddr[0], "...")
-
     # create new socket to communicate with client
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((TCP_IP, 0))
     _, newPort = s.getsockname()
 
     # send new port to client
+
     inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort, True)))
 
     # close connection
@@ -30,14 +28,11 @@ def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
     # wait for client to connect to new port
     s.listen(1)  # only 1 client can connect to this socket
 
-    # waiting for connection print
-    print("Listening for connection on port:", newPort, "...")
-
     # accept connection
     conn, addr = s.accept()
 
     # connection established print
-    print("Established TCPombo Connection with Client @",
+    print("\nTCPombo Connection on Port", newPort, "with Client @",
           addr[0] + ":" + str(addr[1]))
 
     # listen for messages from client
@@ -60,7 +55,7 @@ def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
             else:
                 # print data
                 print()
-                print(addr[0], ":", tcpombo)  # print protocol message
+                print("(" + addr[0] + "):", tcpombo)  # print protocol message
                 print("Data:", tcpombo.getData())  # print transported data
 
                 # send response message

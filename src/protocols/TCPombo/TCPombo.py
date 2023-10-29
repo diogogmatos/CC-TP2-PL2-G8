@@ -19,7 +19,7 @@ class TCPombo:
     def __init__(self, chirp: bool, kiss: bool, length: int, data: bytes):
         self.chirp = chirp
         self.kiss = kiss
-        self.length = length
+        self.length = length  # waiting for connection print
         self.data = data
 
     # create a chirp or call
@@ -54,7 +54,7 @@ class TCPombo:
         else:
             r += "('> "
         if self.chirp:
-            r += "Chirp!"
+            r += "Chirp! "
         else:
             r += "Call! "
         r += "Here's " + str(self.length) + " bytes of data!"
