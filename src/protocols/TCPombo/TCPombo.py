@@ -18,6 +18,7 @@ class TCPombo:
 
     def __init__(self, chirp: bool, kiss: bool, length: int, data: bytes):
         self.chirp = chirp
+        self.kiss = kiss
         self.length = length
         self.data = data
 
@@ -48,9 +49,13 @@ class TCPombo:
     # to string
     def __str__(self):
         r = ""
-        if self.chirp:
-            r += "('> Chirp! "
+        if self.kiss:
+            r += "('> ❤ <') "
         else:
-            r += "('> Call! "
+            r += "('> "
+        if self.chirp:
+            r += "Chirp!"
+        else:
+            r += "Call! "
         r += "Here's " + str(self.length) + " bytes of data!"
         return r
