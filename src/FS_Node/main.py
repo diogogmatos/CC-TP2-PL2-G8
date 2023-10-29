@@ -2,30 +2,12 @@ import sys  # to get argument input
 import socket  # to send via tcp
 import pickle  # to serialize objects into bytes
 
-
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
 # TODO:
 # - fazer o node informar o tracker sobre os ficheiros que tem disponível, inicialmente e à medida que vai recebendo novos
 # - fazer o node ser um servidor udp
-
-
-def connect_Server(TCP_IP:int , TCP_PORT:int, BUFFER_SIZE:int)->socket._RetAddress:
-    s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s1.connect((TCP_IP, TCP_PORT))
-    except socket.error as e:
-        print("Error connecting to server:", e)
-        return
-    
-    data = s1.recv(BUFFER_SIZE)
-    dedicatedPort: socket._RetAddress = pickle.loads(data).getData()
-
-    # close inicial connection
-    s1.close()
-
-    return dedicatedPort
 
 
 def main():
@@ -47,8 +29,20 @@ def main():
     print("Establishing TCPombo Connection with Server @",
           TCP_IP + ":" + str(TCP_PORT) + "...")
 
-    # establish inicial tcp connection with server    
-    dedicatedPort = connect_Server(TCP_IP, TCP_PORT, BUFFER_SIZE)
+    # establish inicial tcp connection with server
+    s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s1.connect((TCP_IP, TCP_PORT))
+    except socket.error as e:
+        print("Error connecting to server:", e)
+        return
+
+    # receive dedicated port to connect to from server
+    data = s1.recv(BUFFER_SIZE)
+    dedicatedPort: socket._RetAddress = pickle.loads(data).getData()
+
+    # close inicial connection
+    s1.close()
 
     # establish dedicated tcp connection with server
     s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -67,11 +61,8 @@ def main():
           TCP_IP + ":" + str(dedicatedPort))
 
     # set message to send
-    listFiles = list()
-    listFiles.append("file1")
-    listFiles.append("file2")
-
-    m = TCPombo.createChirp(listFiles,False)
+    string = "Hello World!"
+    m = TCPombo.createChirp(string)
     # serialize message into bytes with pickle.dumps()
     MESSAGE = pickle.dumps(m)
 
@@ -97,4 +88,3 @@ def main():
 
 
 main()
-
