@@ -16,11 +16,10 @@ class TCPombo:
     - data: used to carry messages between client and server
     """
 
-
-    def __init__(self, chirp: bool, kiss:bool, length: int, data: bytes):
+    def __init__(self, chirp: bool, kiss: bool, length: int, data: bytes):
         self.chirp = chirp
         self.kiss = kiss
-        self.length = length
+        self.length = length  # waiting for connection print
         self.data = data
 
     # create a chirp or call
@@ -35,7 +34,6 @@ class TCPombo:
         d: bytes = pickle.dumps(data)  # serialize data into bytes
         return TCPombo(False, kiss, len(d), d)
 
-      
     # get's & set's
 
     def isChirp(self):
@@ -56,8 +54,8 @@ class TCPombo:
         else:
             r += "('> "
         if self.chirp:
-            r += "('> Chirp! "
+            r += "Chirp! "
         else:
-            r += "('> Call! "
+            r += "Call! "
         r += "Here's " + str(self.length) + " bytes of data!"
         return r

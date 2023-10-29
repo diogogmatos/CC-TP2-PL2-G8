@@ -11,21 +11,39 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 # - fazer o node ser um servidor udp
 
 
-def connectServer(TCP_IP:int , TCP_PORT:int, BUFFER_SIZE:int)->socket._RetAddress:
+# establish connection with server
+def connectServer(TCP_IP: str, TCP_PORT: int, BUFFER_SIZE: int):
+    # establish initial tcp connection with server
     s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s1.connect((TCP_IP, TCP_PORT))
     except socket.error as e:
-        print("Error connecting to server:", e)
-        return
-    
+        raise ValueError("Error connecting to server:", e)
+
+    # receive dedicated port from server
     data = s1.recv(BUFFER_SIZE)
     dedicatedPort: socket._RetAddress = pickle.loads(data).getData()
 
     # close inicial connection
     s1.close()
 
-    return dedicatedPort
+    # establish dedicated tcp connection with server
+    s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s2.connect((TCP_IP, dedicatedPort))
+    except socket.error as e:
+        raise ValueError("Error connecting to server on port",
+                         dedicatedPort, ":", e)
+
+    # connection established print
+    print("  ww     ///")
+    print(" ('>     <')")
+    print(" (//)   (\\\\)")
+    print("--oo-----oo--")
+    print("TCPombo Connection with Server @",
+          TCP_IP + ":" + str(dedicatedPort))
+
+    return s2
 
 
 def main():
@@ -43,35 +61,20 @@ def main():
     # set buffer size
     BUFFER_SIZE = 1024
 
-    # establishing connection print
-    print("Establishing TCPombo Connection with Server @",
-          TCP_IP + ":" + str(TCP_PORT) + "...")
-
-    # establish inicial tcp connection with server    
-    dedicatedPort = connect_Server(TCP_IP, TCP_PORT, BUFFER_SIZE)
-
-    # establish dedicated tcp connection with server
-    s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # establish connection with server
     try:
-        s2.connect((TCP_IP, dedicatedPort))
-    except socket.error as e:
-        print("Error connecting to server on port", dedicatedPort, ":", e)
+        s2 = connectServer(TCP_IP, TCP_PORT, BUFFER_SIZE)
+    except ValueError as e:
+        print(e)
         return
 
-    # connection established print
-    print("\n  ww     ///")
-    print(" ('>     <')")
-    print(" (//)   (\\\\)")
-    print("--oo-----oo--")
-    print("TCPombo Connection with Server @",
-          TCP_IP + ":" + str(dedicatedPort))
-
     # set message to send
-    listFiles = list()
+    listFiles = list()  # TODO: get files from folder
     listFiles.append("file1")
     listFiles.append("file2")
 
-    m = TCPombo.createChirp(listFiles,False)
+    # create message
+    m = TCPombo.createChirp(listFiles)
     # serialize message into bytes with pickle.dumps()
     MESSAGE = pickle.dumps(m)
 
@@ -82,8 +85,8 @@ def main():
     data = s2.recv(BUFFER_SIZE)
 
     # close connection
-    # s2.send(pickle.dumps(TCPombo.createChirp("quit")))
-    # s2.close()
+    s2.send(pickle.dumps(TCPombo.createChirp("quit", True)))
+    s2.close()
 
     # decode binary data with picke.loads()
     tcpombo: TCPombo = pickle.loads(data)
@@ -92,9 +95,5 @@ def main():
     print(tcpombo)  # print protocol message
     print("Data:", tcpombo.getData())  # print transported data
 
-    while 1:
-        pass
-
 
 main()
-
