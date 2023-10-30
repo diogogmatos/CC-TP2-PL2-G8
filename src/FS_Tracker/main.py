@@ -1,5 +1,4 @@
 import socket  # to send via tcp
-import pickle  # to serialize objects into bytes
 import signal  # to handle signals
 import sys  # to exit gracefully
 import threading  # to
@@ -11,43 +10,32 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 # - make the tracker actually receive and store information about what files each node has available
 # - modularize the connection handling code
 
+TCP_IP = socket.gethostbyname(socket.gethostname())
+TCP_PORT = 9090
+BUFFER_SIZE = 1024
 
-def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
-    # create new socket to communicate with client
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((TCP_IP, 0))
-    _, newPort = s.getsockname()
 
-    # send new port to client
-
-    inicialConn.send(pickle.dumps(TCPombo.createChirp(newPort, True)))
-
-    # close connection
-    inicialConn.close()
-
-    # wait for client to connect to new port
-    s.listen(1)  # only 1 client can connect to this socket
-
-    # accept connection
-    conn, addr = s.accept()
-
+def handleNode(conn, addr):
     # connection established print
-    print("\nTCPombo Connection on Port", newPort, "with Client @",
+    print("\nTCPombo Connection with Client @",
           addr[0] + ":" + str(addr[1]))
 
     # listen for messages from client
     run = True
     while run:
         # receive message
-        data = conn.recv(BUFFER_SIZE)
+        data = conn.recv(4)
+        length = int.from_bytes(data, byteorder="big")
+        l = 4
+        while l < length:  # exit the loop when all data has been received
+            chunk = conn.recv(BUFFER_SIZE)
+            l += len(chunk)
+            data += chunk
 
         # if data was actually received
         if data:
-            # decode binary data with pickle.loads()
-            tcpombo: TCPombo = pickle.loads(data)
-
             # check if client wants to disconnect
-            if tcpombo.getData() == "quit":
+            if TCPombo.getData(data) == "quit":
                 # disconnect print
                 print("\nClient @", addr[0] + ":" +
                       str(addr[1]), "disconnected.")
@@ -55,17 +43,14 @@ def handleNode(inicialConn, inicialClientAddr, BUFFER_SIZE, TCP_IP):
             else:
                 # print data
                 print()
-                print("(" + addr[0] + "):", tcpombo)  # print protocol message
-                print("Data:", tcpombo.getData())  # print transported data
+                print(TCPombo.toString(data))
 
                 # send response message
                 response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
-                conn.send(pickle.dumps(TCPombo.createChirp(response)))
+                conn.send(TCPombo.createChirp(response))
 
     # close connection
     conn.close()
-    # close socket
-    s.close()
 
 
 def main():
@@ -78,17 +63,10 @@ def main():
     # register the signal handler for SIGINT (Ctrl+C)
     signal.signal(signal.SIGINT, signal_handler)
 
-    # set server ip
-    TCP_IP = socket.gethostbyname(socket.gethostname())
-    TCP_PORT = 9090
-
-    # set buffer size
-    BUFFER_SIZE = 1024
-
     # listen for connections with the server
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((TCP_IP, TCP_PORT))
-    s.listen(5)  # 5 = max number of pending connections
+    s.listen(5)  # 5 = max number of connections
 
     # server active print
     print("  ww")
@@ -104,8 +82,7 @@ def main():
         conn, addr = s.accept()
 
         # start a new thread to handle the connection
-        threading.Thread(target=handleNode, args=(
-            conn, addr, BUFFER_SIZE, TCP_IP)).start()
+        threading.Thread(target=handleNode, args=(conn, addr)).start()
 
 
 main()
