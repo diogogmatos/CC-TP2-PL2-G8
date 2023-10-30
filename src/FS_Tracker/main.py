@@ -14,7 +14,6 @@ TCP_IP = socket.gethostbyname(socket.gethostname())
 TCP_PORT = 9090
 BUFFER_SIZE = 1024
 
-
 def handleNode(conn, addr):
     # connection established print
     print("\nTCPombo Connection with Client @",

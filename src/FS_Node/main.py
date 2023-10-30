@@ -2,6 +2,7 @@ import sys  # to get argument input
 import socket  # to send via tcp
 
 
+
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
@@ -12,7 +13,6 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 
 # establish connection with server
 def connectServer(TCP_IP: str, TCP_PORT: int, BUFFER_SIZE: int):
-    # establish initial tcp connection with server
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.connect((TCP_IP, TCP_PORT))
@@ -72,6 +72,5 @@ def main():
 
     # print data
     print(TCPombo.toString(tcpombo))
-
 
 main()
