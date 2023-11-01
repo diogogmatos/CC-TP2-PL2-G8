@@ -1,6 +1,6 @@
 import sys  # to get argument input
 import socket  # to send via tcp
-import pickle  # to serialize objects into bytes
+
 
 
 # import TCPombo protocol
@@ -13,27 +13,11 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 
 # establish connection with server
 def connectServer(TCP_IP: str, TCP_PORT: int, BUFFER_SIZE: int):
-    # establish initial tcp connection with server
-    s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        s1.connect((TCP_IP, TCP_PORT))
+        s.connect((TCP_IP, TCP_PORT))
     except socket.error as e:
         raise ValueError("Error connecting to server:", e)
-
-    # receive dedicated port from server
-    data = s1.recv(BUFFER_SIZE)
-    dedicatedPort: socket._RetAddress = pickle.loads(data).getData()
-
-    # close inicial connection
-    s1.close()
-
-    # establish dedicated tcp connection with server
-    s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s2.connect((TCP_IP, dedicatedPort))
-    except socket.error as e:
-        raise ValueError("Error connecting to server on port",
-                         dedicatedPort, ":", e)
 
     # connection established print
     print("  ww     ///")
@@ -41,9 +25,9 @@ def connectServer(TCP_IP: str, TCP_PORT: int, BUFFER_SIZE: int):
     print(" (//)   (\\\\)")
     print("--oo-----oo--")
     print("TCPombo Connection with Server @",
-          TCP_IP + ":" + str(dedicatedPort))
+          TCP_IP + ":" + str(TCP_PORT))
 
-    return s2
+    return s
 
 
 def main():
@@ -63,7 +47,7 @@ def main():
 
     # establish connection with server
     try:
-        s2 = connectServer(TCP_IP, TCP_PORT, BUFFER_SIZE)
+        s = connectServer(TCP_IP, TCP_PORT, BUFFER_SIZE)
     except ValueError as e:
         print(e)
         return
@@ -74,26 +58,19 @@ def main():
     listFiles.append("file2")
 
     # create message
-    m = TCPombo.createChirp(listFiles)
-    # serialize message into bytes with pickle.dumps()
-    MESSAGE = pickle.dumps(m)
+    MESSAGE = TCPombo.createChirp(listFiles)
 
     # send message
-    s2.send(MESSAGE)
+    s.send(MESSAGE)
 
     # wait for / receive response
-    data = s2.recv(BUFFER_SIZE)
+    tcpombo = s.recv(BUFFER_SIZE)
 
     # close connection
-    s2.send(pickle.dumps(TCPombo.createChirp("quit", True)))
-    s2.close()
-
-    # decode binary data with picke.loads()
-    tcpombo: TCPombo = pickle.loads(data)
+    s.send((TCPombo.createChirp("quit")))
+    s.close()
 
     # print data
-    print(tcpombo)  # print protocol message
-    print("Data:", tcpombo.getData())  # print transported data
-
+    print(TCPombo.toString(tcpombo))
 
 main()
