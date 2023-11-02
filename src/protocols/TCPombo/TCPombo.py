@@ -87,7 +87,7 @@ class TCPombo:
         # create TCPombo
         tcpombo = bytearray()
         tcpombo.extend(l.to_bytes(4, byteorder="big"))  # length
-        tcpombo.append(int(chirp))  # chirp
+        tcpombo.append(chirp)  # chirp
         tcpombo.extend(d)  # data (in bytes)
 
         return tcpombo
