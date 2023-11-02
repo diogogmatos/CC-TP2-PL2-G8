@@ -120,7 +120,6 @@ def handleNode(conn, addr, availableFiles: Flock):
             # disconnect print
             print("\nClient @", addr[0] + ":" +
                   str(addr[1]), "disconnected.")
-            print(availableFiles)
             run = False
 
     # close connection
