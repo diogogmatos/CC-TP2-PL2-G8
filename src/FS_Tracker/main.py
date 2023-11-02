@@ -14,7 +14,7 @@ TCP_IP = socket.gethostbyname(socket.gethostname())
 TCP_PORT = 9090
 BUFFER_SIZE = 1024
 
-def handleNode(conn, addr):
+def handleNode(conn, addr, dictArray: dict):
     # connection established print
     print("\nTCPombo Connection with Client @",
           addr[0] + ":" + str(addr[1]))
@@ -42,17 +42,25 @@ def handleNode(conn, addr):
             else:
                 # print data
                 print()
-                print(TCPombo.toString(data))
-
+                #print(TCPombo.toString(data))
+                if(TCPombo.getChirp(data)):
+                    if(not(conn in dictArray)):
+                        dictArray[conn] = TCPombo.getData(data)
+                    else:
+                        dictArray[conn].append(data)
                 # send response message
-                response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
-                conn.send(TCPombo.createChirp(response))
+                else:
+                    response = "Hello " + str(addr[0]) + ":" + str(addr[1]) + "!"
+                    conn.send(TCPombo.createChirp(response))
 
     # close connection
     conn.close()
 
 
 def main():
+
+    dictArray = dict()
+
     # define a signal handler function
     def signal_handler(sig, frame):
         if (sig == 2):
@@ -81,7 +89,7 @@ def main():
         conn, addr = s.accept()
 
         # start a new thread to handle the connection
-        threading.Thread(target=handleNode, args=(conn, addr)).start()
+        threading.Thread(target=handleNode, args=(conn, addr, dictArray)).start()
 
 
 main()
