@@ -1,9 +1,11 @@
 import sys  # to get argument input
 import socket  # to send via tcp
+import time
 
+# TCPombo protocol payload
+from src.types.Pombo import Pombo
 
-
-# import TCPombo protocol
+# TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
 # TODO:
@@ -52,25 +54,37 @@ def main():
         print(e)
         return
 
+    # FOR TESTING ONLY:
+
     # set message to send
-    listFiles = list()  # TODO: get files from folder
-    listFiles.append("file1")
-    listFiles.append("file2")
+    pombo1: Pombo = [("file3", {1, 2, 3}), ("file4", {4, 5, 6})]
 
     # create message
-    MESSAGE = TCPombo.createChirp(listFiles)
+    MESSAGE1 = TCPombo.createChirp(pombo1)
 
     # send message
-    s.send(MESSAGE)
+    s.send(MESSAGE1)
 
-    # wait for / receive response
-    tcpombo = s.recv(BUFFER_SIZE)
+    time.sleep(2)
+
+    pombo2: Pombo = [("file5", {4, 5, 6}), ("file6", {1, 2, 3})]
+    MESSAGE2 = TCPombo.createChirp(pombo2)
+    s.send(MESSAGE2)
+
+    time.sleep(2)
+
+    pombo3: Pombo = [("file3", set())]
+    MESSAGE3 = TCPombo.createCall(pombo3)
+    s.send(MESSAGE3)
+
+    tcpombo_response = s.recv(BUFFER_SIZE)
+
+    print(TCPombo.toString(tcpombo_response))
+
+    # END OF TEST
 
     # close connection
-    s.send((TCPombo.createChirp("quit")))
     s.close()
 
-    # print data
-    print(TCPombo.toString(tcpombo))
 
 main()
