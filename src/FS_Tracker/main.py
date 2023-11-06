@@ -4,23 +4,21 @@ import sys  # to exit gracefully
 import threading  # to handle multiple connections
 from typing import Dict  # to use typing for dictionaries
 
-# TCPombo protocol payload
+# TCPombo protocol payload type
 from src.types.Pombo import Pombo
 
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
-# TODO:
-# - make the tracker actually receive and store information about what files each node has available
-# - modularize the connection handling code
-
 TCP_IP = socket.gethostbyname(socket.gethostname())
 TCP_PORT = 9090
 BUFFER_SIZE = 1024
 
+# type for the dictionary that stores the available files for each node
 Flock = Dict[tuple[str, int], Pombo]
 
 
+# join two "Pombo" lists
 def joinPombos(p1: Pombo, p2: Pombo) -> Pombo:
     p: Pombo = list()
     seen_first_elements = set()
@@ -46,7 +44,71 @@ def joinPombos(p1: Pombo, p2: Pombo) -> Pombo:
     return p
 
 
-def handleNode(conn, addr, availableFiles: Flock):
+# handle a chirp message
+def handleChirp(addr: tuple[str, int], availableFiles: Flock, data: bytes, lock: threading.Lock):
+    lock.acquire()
+    try:
+        if (addr not in availableFiles):
+            availableFiles[addr] = TCPombo.getData(data)
+        else:
+            availableFiles[addr] = joinPombos(
+                availableFiles[addr], TCPombo.getData(data))
+    finally:
+        lock.release()
+
+
+# handle a call message
+def handleCall(conn, availableFiles: Flock, data: bytes, lock: threading.Lock):
+    # create message
+    MESSAGE: Pombo = list()
+
+    # get requested file / file blocks
+    requestedFile = TCPombo.getData(data)[0]
+
+    f_name = requestedFile[0]
+    f_blocks = requestedFile[1]
+
+    lock.acquire()
+    try:
+        # if client requested specific file blocks
+        if len(f_blocks) > 0:
+            # send the locations of the requested file blocks
+            for node in availableFiles:
+                for file in availableFiles[node]:
+                    if (file[0] == f_name):
+                        s: set[int] = set()
+                        for block in file[1]:
+                            if block in f_blocks:
+                                s.add(block)
+                        if len(s) > 0:
+                            MESSAGE.append((node[0], s))
+
+        # if client requested the whole file
+        else:
+            # send the locations of the requested file
+            for node in availableFiles:
+                for file in availableFiles[node]:
+                    if (file[0] == f_name):
+                        MESSAGE.append((node[0], file[1]))
+    finally:
+        lock.release()
+
+    # send message
+    conn.send(TCPombo.createChirp(MESSAGE))
+
+
+# handle a node being disconnected: remove it from availableFiles
+def handleDisconnect(addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
+    lock.acquire()
+    try:
+        if (addr in availableFiles):
+            del availableFiles[addr]
+    finally:
+        lock.release()
+
+
+# handle a connection with a node
+def handleNode(conn, addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
     # connection established print
     print("\nTCPombo Connection with Client @",
           addr[0] + ":" + str(addr[1]))
@@ -69,52 +131,14 @@ def handleNode(conn, addr, availableFiles: Flock):
                 data += chunk
 
             # print message
-            print()
-            print(TCPombo.toString(data))
+            print("\n" + TCPombo.toString(data))
 
-            # if the message is a chirp, store the available files
+            # store the available files
             if (TCPombo.isChirp(data)):
-                if (addr not in availableFiles):
-                    availableFiles[addr] = TCPombo.getData(data)
-                else:
-                    availableFiles[addr] = joinPombos(
-                        availableFiles[addr], TCPombo.getData(data))
-
-            # else if the message is a call, send the location of the requested file
+                handleChirp(addr, availableFiles, data, lock)
+            # send the location of the requested file
             else:
-                # create message
-                MESSAGE: Pombo = list()
-
-                # get requested file / file blocks
-                requestedFile = TCPombo.getData(data)[0]
-
-                f_name = requestedFile[0]
-                f_blocks = requestedFile[1]
-
-                # if client requested specific file blocks
-                if len(f_blocks) > 0:
-                    # send the locations of the requested file blocks
-                    for node in availableFiles:
-                        for file in availableFiles[node]:
-                            if (file[0] == f_name):
-                                s: set[int] = set()
-                                for block in file[1]:
-                                    if block in f_blocks:
-                                        s.add(block)
-                                if len(s) > 0:
-                                    MESSAGE.append((node[0], s))
-
-                # if client requested the whole file
-                else:
-                    # send the locations of the requested file
-                    for node in availableFiles:
-                        for file in availableFiles[node]:
-                            if (file[0] == f_name):
-                                MESSAGE.append((node[0], file[1]))
-
-                # send message
-                conn.send(TCPombo.createChirp(MESSAGE))
-
+                handleCall(conn, availableFiles, data, lock)
         # else, the client disconnected
         else:
             # disconnect print
@@ -124,11 +148,17 @@ def handleNode(conn, addr, availableFiles: Flock):
 
     # close connection
     conn.close()
+    # remove node from availableFiles
+    handleDisconnect(addr, availableFiles, lock)
 
 
+# main function
 def main():
     # create dictionary to store the available files for each node
     availableFiles: Flock = dict()
+
+    # create a lock object, used to lock access to availableFiles between threads
+    lock = threading.Lock()
 
     # define a signal handler function
     def signal_handler(sig, frame):
@@ -159,7 +189,7 @@ def main():
 
         # start a new thread to handle the connection
         threading.Thread(target=handleNode, args=(
-            conn, addr, availableFiles)).start()
+            conn, addr, availableFiles, lock)).start()
 
 
 main()
