@@ -17,6 +17,3 @@ run-node:
 
 run-tracker:
 	@$(PYTHON) -m src.FS_Tracker.main
-
-%:
-	@:
