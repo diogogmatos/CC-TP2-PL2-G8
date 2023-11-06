@@ -97,6 +97,16 @@ def handleCall(conn, availableFiles: Flock, data: bytes, lock: threading.Lock):
     conn.send(TCPombo.createChirp(MESSAGE))
 
 
+# handle a node being disconnected: remove it from availableFiles
+def handleDisconnect(addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
+    lock.acquire()
+    try:
+        if (addr in availableFiles):
+            del availableFiles[addr]
+    finally:
+        lock.release()
+
+
 # handle a connection with a node
 def handleNode(conn, addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
     # connection established print
@@ -138,6 +148,8 @@ def handleNode(conn, addr: tuple[str, int], availableFiles: Flock, lock: threadi
 
     # close connection
     conn.close()
+    # remove node from availableFiles
+    handleDisconnect(addr, availableFiles, lock)
 
 
 # main function
