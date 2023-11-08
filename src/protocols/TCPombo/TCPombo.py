@@ -77,17 +77,19 @@ class TCPombo:
     # create protocol message
 
     @staticmethod
-    def __createTCPombo(chirp: bool, data: Pombo):
+    def __createTCPombo(chirp: bool, data, name:str=""):
         # turn data into bytes
         d = TCPombo.__toBytes(data)
 
         # calculate length
-        l = 5 + len(d)
+        l = 9 + len(name) + len(d)
 
         # create TCPombo
         tcpombo = bytearray()
         tcpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         tcpombo.append(chirp)  # chirp
+        tcpombo.extend(len(name).to_bytes(4, byteorder="big"))
+        tcpombo.extend(name)
         tcpombo.extend(d)  # data (in bytes)
 
         return tcpombo
@@ -111,13 +113,19 @@ class TCPombo:
         return bool(TCPombo.getTCPombo(tcpombo)[4])
 
     @staticmethod
+    def getName(tcpombo: bytes):
+        length = int.from_bytes(TCPombo.getTCPombo(tcpombo)[5])
+        return str(TCPombo.getTCPombo(tcpombo)[9:9+length])
+
+    @staticmethod
     def getLength(tcpombo: bytes):
         return int.from_bytes(TCPombo.getTCPombo(tcpombo)[0:4], byteorder="big")
 
     @staticmethod
     def getData(tcpombo: bytes):
-        # retorna o payload do protocolo (tudo menos os primeiros 5 bytes)
-        return TCPombo.__fromBytes(TCPombo.getTCPombo(tcpombo)[5:])
+        nameLength = 9 + int.from_bytes(TCPombo.getTCPombo(tcpombo)[5])
+        # retorna o payload do protocolo (tudo menos os primeiros (9 + nameLen) bytes)
+        return TCPombo.__fromBytes(TCPombo.getTCPombo(tcpombo)[nameLength:])
 
     # to string
     @staticmethod
