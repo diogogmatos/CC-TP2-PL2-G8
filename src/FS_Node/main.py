@@ -45,7 +45,7 @@ def handleTransfer(s: socket.socket, locations: Pombo):
 def handleGet(s: socket.socket, file: str):
     # create message
     pombo: Pombo = [(file, set())]
-    message = TCPombo.createCall(pombo)
+    message = TCPombo.createCall("", pombo)
     s.send(message)
 
     # receive response
@@ -86,7 +86,7 @@ def main():
     for file in files:
         # create message
         pombo.append((file, set()))
-    message = TCPombo.createChirp(pombo)
+    message = TCPombo.createChirp("", pombo)
     s.send(message)
 
     # handle user input
