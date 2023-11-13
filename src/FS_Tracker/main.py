@@ -10,7 +10,6 @@ from src.types.Pombo import Pombo
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
-TCP_IP = socket.gethostbyname(socket.gethostname())
 TCP_PORT = 9090
 BUFFER_SIZE = 1024
 
@@ -171,7 +170,7 @@ def main():
 
     # listen for connections with the server
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((TCP_IP, TCP_PORT))
+    s.bind(('', TCP_PORT))
     s.listen(5)  # 5 = max number of connections
 
     # server active print
@@ -179,7 +178,7 @@ def main():
     print(" ('>")
     print(" (//)")
     print("--oo---------")
-    print("Server Active @ " + TCP_IP + ":" + str(TCP_PORT))
+    print("Server Active @ " + s.getsockname()[0] + ":" + str(TCP_PORT))
     print("Listening for chirps and calls...")
 
     # wait & accept incoming connections
