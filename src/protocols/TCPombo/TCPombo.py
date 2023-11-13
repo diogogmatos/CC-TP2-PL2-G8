@@ -1,4 +1,7 @@
 from src.types.Pombo import Pombo  # tipo do payload do protocolo TCPombo
+import hashlib  # para calcular o hash dos blocos
+
+CHUNK_SIZE = 1024  # tamanho dos chunks em bytes
 
 
 class TCPombo:
@@ -8,6 +11,28 @@ class TCPombo:
     - chirp: flag used to send a chirp or a call, i.e. used to communicate information or request information
     - data: used to carry messages between client and server
     """
+
+    # handle file chunks
+
+    # obter o conjunto de blocos de um ficheiro e a hash de cada um
+    @staticmethod
+    def chunkify(data: bytes) -> set[tuple[int, bytes]]:
+        data_array = bytearray(data)
+
+        # create chunks
+        chunks: set[tuple[int, bytes]] = set()
+        i = 0
+        while i <= (len(data) // CHUNK_SIZE):
+            # (id, hash)
+            chunks.add((i, hashlib.sha1(data_array[0:CHUNK_SIZE]).digest()))
+            data_array = data_array[CHUNK_SIZE:]
+            i += 1
+
+        # deal with remaining bytes
+        if len(data_array) > 0:
+            chunks.add((i, hashlib.sha1(data_array).digest()))
+
+        return chunks
 
     # handle bytes
 
@@ -29,12 +54,13 @@ class TCPombo:
             # adicionar nome do ficheiro
             d_array.extend(f_name.encode())
 
-            # adicionar tamanho do array de blocos
+            # adicionar tamanho do set de blocos
             f_blocks = f[1]
             d_array.extend(len(f_blocks).to_bytes(4, byteorder="big"))
             # adicionar blocos
-            for b in f_blocks:
-                d_array.extend(b.to_bytes(4, byteorder="big"))
+            for (b_id, b_hash) in f_blocks:
+                d_array.extend(b_id.to_bytes(4, byteorder="big"))
+                d_array.extend(b_hash)
 
         # converter bytearray para bytes
         d = bytes(d_array)
@@ -65,11 +91,14 @@ class TCPombo:
             f_blocks_length = int.from_bytes(d_array[0:4], byteorder="big")
 
             # ler blocos
-            f_blocks = set()
+            f_blocks: set[tuple[int, bytes]] = set()
             d_array = d_array[4:]
             for j in range(f_blocks_length):
-                f_blocks.add(int.from_bytes(d_array[0:4], byteorder="big"))
-                d_array = d_array[4:]
+                # (id, hash)
+                f_blocks.add(
+                    (int.from_bytes(d_array[0:4], byteorder="big"), bytes(d_array[4:24])))
+                # avancar para o proximo bloco (tuplo[int,bytes])
+                d_array = d_array[24:]
 
             # adicionar ficheiro e seus blocos
             d.append((f_name, f_blocks))
@@ -145,5 +174,16 @@ class TCPombo:
         r += "Here's a message from " + \
             TCPombo.getName(tcpombo) + " with " + \
             str(TCPombo.getLength(tcpombo)) + " bytes!"
-        r += "\nData: " + str(TCPombo.getData(tcpombo))
+        r += "\nData: " + str(TCPombo.toStringPombo(TCPombo.getData(tcpombo)))
         return r
+
+    # Pombo to string
+    @staticmethod
+    def toStringPombo(pombo: Pombo):
+        l = list()
+        for f in pombo:
+            s = set()
+            for b in f[1]:
+                s.add(b[0])
+            l.append((f[0], s))
+        return str(l)

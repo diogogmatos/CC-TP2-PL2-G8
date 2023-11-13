@@ -61,6 +61,9 @@ def handleCall(conn, availableFiles: Flock, data: bytes, lock: threading.Lock):
     # create message
     MESSAGE: Pombo = list()
 
+    for f in availableFiles.values():
+        print(TCPombo.toStringPombo(f))
+
     # get requested file / file blocks
     requestedFile = TCPombo.getData(data)[0]
 
@@ -75,7 +78,7 @@ def handleCall(conn, availableFiles: Flock, data: bytes, lock: threading.Lock):
             for node in availableFiles:
                 for file in availableFiles[node]:
                     if (file[0] == f_name):
-                        s: set[int] = set()
+                        s: set[tuple[int, bytes]] = set()
                         for block in file[1]:
                             if block in f_blocks:
                                 s.add(block)
