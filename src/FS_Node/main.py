@@ -1,6 +1,6 @@
 import sys  # to get argument input
 import socket  # to send via tcp
-import time
+import os  # to get files in folder
 
 # TCPombo protocol payload
 from src.types.Pombo import Pombo
@@ -8,13 +8,17 @@ from src.types.Pombo import Pombo
 # TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
+# set server port
+TCP_PORT = 9090
+# set buffer size
+BUFFER_SIZE = 1024
+
 # TODO:
-# - fazer o node informar o tracker sobre os ficheiros que tem disponível, inicialmente e à medida que vai recebendo novos
-# - fazer o node ser um servidor udp
+# - fazer o node ser um servidor udp que atenda pedidos de outros nodes e informe o tracker de ficheiros recebidos
 
 
 # establish connection with server
-def connectServer(TCP_IP: str, TCP_PORT: int, BUFFER_SIZE: int):
+def connectServer(TCP_IP: str):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.connect((TCP_IP, TCP_PORT))
@@ -32,6 +36,30 @@ def connectServer(TCP_IP: str, TCP_PORT: int, BUFFER_SIZE: int):
     return s
 
 
+# handle file transfer
+def handleTransfer(s: socket.socket, locations: Pombo):
+    print(locations)
+
+
+# handle get command
+def handleGet(s: socket.socket, file: str):
+    # create message
+    pombo: Pombo = [(file, set())]
+    message = TCPombo.createCall(pombo)
+    s.send(message)
+
+    # receive response
+    response = s.recv(BUFFER_SIZE)
+    locations = TCPombo.getData(response)
+
+    if locations == []:
+        print("File not found.")
+        return
+
+    # handle file transfer
+    handleTransfer(s, TCPombo.getData(response))
+
+
 def main():
     if len(sys.argv) < 3:
         return False
@@ -42,46 +70,40 @@ def main():
 
     # set server ip
     TCP_IP = server_ip
-    TCP_PORT = 9090
-
-    # set buffer size
-    BUFFER_SIZE = 1024
 
     # establish connection with server
     try:
-        s = connectServer(TCP_IP, TCP_PORT, BUFFER_SIZE)
+        s = connectServer(TCP_IP)
     except ValueError as e:
         print(e)
         return
 
-    # FOR TESTING ONLY:
+    # TODO?: verificar se foram adicionados ficheiros ao folder de x em x tempo
+    # (ficheiros adicionados manualmente à pasta e que não foram transferidos de outros nodes)
+    # send available files in folder
+    files = os.listdir(folder)  # get list of file names
+    pombo: Pombo = []
+    for file in files:
+        # create message
+        pombo.append((file, set()))
+    message = TCPombo.createChirp(pombo)
+    s.send(message)
 
-    # set message to send
-    pombo1: Pombo = [("file3", {1, 2, 3}), ("file4", {4, 5, 6})]
-
-    # create message
-    MESSAGE1 = TCPombo.createChirp(pombo1)
-
-    # send message
-    s.send(MESSAGE1)
-
-    time.sleep(2)
-
-    pombo2: Pombo = [("file5", {4, 5, 6}), ("file6", {1, 2, 3})]
-    MESSAGE2 = TCPombo.createChirp(pombo2)
-    s.send(MESSAGE2)
-
-    time.sleep(2)
-
-    pombo3: Pombo = [("file3", set())]
-    MESSAGE3 = TCPombo.createCall(pombo3)
-    s.send(MESSAGE3)
-
-    tcpombo_response = s.recv(BUFFER_SIZE)
-
-    print(TCPombo.toString(tcpombo_response))
-
-    # END OF TEST
+    # handle user input
+    fail_msg: str = "Unknown command. Available commands:\n- get <filename>\n- exit"
+    print()
+    while True:
+        command = input("> ")
+        parameters = command.split(" ")
+        if len(parameters) < 1 or len(parameters) > 2:
+            print(fail_msg)
+        elif parameters[0] == "exit":
+            break
+        elif parameters[0] == "get":
+            file = parameters[1]
+            handleGet(s, file)
+        else:
+            print(fail_msg)
 
     # close connection
     s.close()
