@@ -94,7 +94,7 @@ def handleCall(conn, availableFiles: Flock, data: bytes, lock: threading.Lock):
         lock.release()
 
     # send message
-    conn.send(TCPombo.createChirp(MESSAGE))
+    conn.send(TCPombo.createChirp("", MESSAGE))
 
 
 # handle a node being disconnected: remove it from availableFiles
