@@ -1,13 +1,14 @@
 import time
 
+
 class UDPombo:
     """
     - length: used to carry the length of the segment in bytes
     - chirp: flag used to send a chirp or a call, i.e. used to communicate information or request information
     - timestamp: used to calculate the RTT
+    - chunk: used to carry the chunk number
     - file name: used to carry the name of the file
-    - chunks: 
-    - data: used to carry a chunk of a file
+    - data: used to carry a chunk of a file (for chirps)
     """
 
     # create protocol message
@@ -15,17 +16,17 @@ class UDPombo:
     @staticmethod
     def __createUDPombo(chirp: bool, chunk: int, file: str, data: bytes):
         # calculate length
-        # length + chirp + timestamp + chunk + file name length + file name + data
-        l = 4 + 1 + 4 + 4 + 4 + len(file) + len(data)
+        # length + chirp + timestamp + chunk + file name + \0 + data
+        l = 4 + 1 + 4 + 4 + len(file) + 1 + len(data)
 
         # create UDPombo
         udpombo = bytearray()
         udpombo.extend(l.to_bytes(4, byteorder="big"))  # length
-        udpombo.append(chirp) # chirp
-        udpombo.extend(int(round(time.time() * 1000)).to_bytes(4, byteorder="big")) # timestamp
-        udpombo.extend(chunk.to_bytes(4, byteorder="big")) # chunk
-        udpombo.extend(len(file).to_bytes(4, byteorder="big")) # file name length
-        udpombo.extend(file.encode()) # file name
+        udpombo.append(chirp)  # chirp
+        udpombo.extend(int(round(time.time() * 1000)
+                           ).to_bytes(4, byteorder="big"))  # timestamp
+        udpombo.extend(chunk.to_bytes(4, byteorder="big"))  # chunk
+        udpombo.extend((file + "\0").encode())  # file name + \0
         udpombo.extend(data)
 
         return udpombo
@@ -51,23 +52,27 @@ class UDPombo:
     @staticmethod
     def getTimestamp(data: bytes):
         return int.from_bytes(data[5:9], byteorder="big")
-    
+
     @staticmethod
     def getChunk(data: bytes):
         return int.from_bytes(data[9:13], byteorder="big")
-    
-    @staticmethod
-    def getFileNameLength(data: bytes):
-        return int.from_bytes(data[13:17], byteorder="big")
-    
+
     @staticmethod
     def getFileName(data: bytes):
-        nameLength = UDPombo.getFileNameLength(data)
-        return bytearray(data)[17:17+nameLength].decode()
+        b_array = bytearray(data)[13:]
+
+        f_name = ""
+        b: str = b_array[0:1].decode()
+        while b != "\0":
+            f_name += b
+            b_array = b_array[1:]
+            b = b_array[0:1].decode()
+
+        return f_name
 
     @staticmethod
     def getData(data: bytes):
-        overhead = 17 + UDPombo.getFileNameLength(data)
+        overhead = 13 + len(UDPombo.getFileName(data)) + 1
         return data[overhead:]
 
     # to string
@@ -78,6 +83,11 @@ class UDPombo:
             r += "('> Chirp! "
         else:
             r += "('> Call! "
-        r += "Here's a message from with " + \
-            str(UDPombo.getLength(udpombo)) + " bytes!"
+        r += "Here's a message with " + \
+            str(UDPombo.getLength(udpombo)) + " bytes! I'm "
+        if UDPombo.isChirp(udpombo):
+            r += "carrying"
+        else:
+            r += "asking for"
+        r += " chunk number " + str(UDPombo.getChunk(udpombo)) + " of " + UDPombo.getFileName(udpombo) + "."
         return r

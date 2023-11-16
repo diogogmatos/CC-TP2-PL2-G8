@@ -120,7 +120,7 @@ class TCPombo:
         tcpombo = bytearray()
         tcpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         tcpombo.append(chirp)  # chirp
-        tcpombo.extend((node + "\0").encode())  # node name
+        tcpombo.extend((node + "\0").encode())  # node name + \0
         tcpombo.extend(d)  # data (in bytes)
 
         return tcpombo
