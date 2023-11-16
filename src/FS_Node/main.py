@@ -65,13 +65,13 @@ def handleGet(s: socket.socket, file: str):
             data += chunk
 
         # check if file was found
-        locations = TCPombo.getData(data)
+        locations = TCPombo.getPombo(data)
         if locations == []:
             print("File not found.")
             return
 
         # handle file transfer
-        handleTransfer(s, TCPombo.getData(data))
+        handleTransfer(s, TCPombo.getPombo(data))
 
 
 def main():

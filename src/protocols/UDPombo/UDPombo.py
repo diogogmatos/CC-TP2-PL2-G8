@@ -5,7 +5,6 @@ class UDPombo:
     - length: used to carry the length of the segment in bytes
     - chirp: flag used to send a chirp or a call, i.e. used to communicate information or request information
     - timestamp: used to calculate the RTT
-    - file name length: used to carry the length of the name of the file
     - file name: used to carry the name of the file
     - chunks: 
     - data: used to carry a chunk of a file

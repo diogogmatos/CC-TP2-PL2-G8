@@ -48,10 +48,10 @@ def handleChirp(addr: tuple[str, int], availableFiles: Flock, data: bytes, lock:
     lock.acquire()
     try:
         if (addr not in availableFiles):
-            availableFiles[addr] = TCPombo.getData(data)
+            availableFiles[addr] = TCPombo.getPombo(data)
         else:
             availableFiles[addr] = joinPombos(
-                availableFiles[addr], TCPombo.getData(data))
+                availableFiles[addr], TCPombo.getPombo(data))
     finally:
         lock.release()
 
@@ -62,7 +62,7 @@ def handleCall(conn, availableFiles: Flock, data: bytes, lock: threading.Lock):
     MESSAGE: Pombo = list()
 
     # get requested file / file blocks
-    requestedFile = TCPombo.getData(data)[0]
+    requestedFile = TCPombo.getPombo(data)[0]
 
     f_name = requestedFile[0]
     f_blocks = requestedFile[1]
