@@ -9,7 +9,9 @@ class TCPombo:
     ### TCPombo Protocol
     - length: used to carry the length of the segment in bytes
     - chirp: flag used to send a chirp or a call, i.e. used to communicate information or request information
-    - data: used to carry messages between client and server
+    - node length: used to carry the length of the name of the node that sent the message
+    - node: used to carry the name of the node that sent the message
+    - data: used to carry the payload of the message
     """
 
     # handle file chunks
@@ -36,132 +38,127 @@ class TCPombo:
 
     # handle bytes
 
-    # convert payload data from Pombo to bytes
+    # Pombo: [('f1', {(0, b'hash1'), (1, b'hash2')}), ('f2', {(2, b'hash3'), (3, b'hash4')})]
+    # bytes: f1\00hash11hash2\nf2\02hash33hash4
+
+    # converter payload de Pombo para bytes
     @staticmethod
     def __toBytes(data: Pombo):
         # criar bytearray para guardar dados
-        d_array: bytearray = bytearray()
-
-        # adicionar número de ficheiros do array
-        file_length = len(data)
-        d_array.extend(file_length.to_bytes(4, byteorder="big"))
+        b_array: bytearray = bytearray()
 
         # adicionar ficheiros e seus blocos
+        i = 0
+        file_nr = len(data)
         for f in data:
-            # adicionar tamanho do nome do ficheiro
-            f_name = f[0]
-            d_array.extend(len(f_name).to_bytes(4, byteorder="big"))
-            # adicionar nome do ficheiro
-            d_array.extend(f_name.encode())
+            # adicionar nome do ficheiro e \0 para separar nome de blocos
+            b_array.extend((f[0] + "\0").encode())
 
-            # adicionar tamanho do set de blocos
-            f_blocks = f[1]
-            d_array.extend(len(f_blocks).to_bytes(4, byteorder="big"))
             # adicionar blocos
-            for (b_id, b_hash) in f_blocks:
-                d_array.extend(b_id.to_bytes(4, byteorder="big"))
-                d_array.extend(b_hash)
+            for (b_id, b_hash) in f[1]:
+                b_array.extend(b_id.to_bytes(4, byteorder="big"))
+                b_array.extend(b_hash)
+
+            i += 1
+            if i < file_nr:
+                # adicionar \n para separar ficheiros
+                b_array.extend("\n".encode())
 
         # converter bytearray para bytes
-        d = bytes(d_array)
+        b = bytes(b_array)
 
-        return d
+        return b
 
-    # convert the payload data from bytes to Pombo
+    # converter payload de bytes para Pombo
     @staticmethod
     def __fromBytes(data: bytes) -> Pombo:
-        # converter bytes para bytearray
-        d_array: bytearray = bytearray(data)
+        # criar Pombo
+        p: Pombo = list()
 
-        # ler número de ficheiros do array
-        file_length = int.from_bytes(d_array[0:4], byteorder="big")
+        b_array = bytearray(data)
+        while len(b_array) > 0:
+            f_name = ""
+            b: str = b_array[0:1].decode()
+            while b != "\0":
+                f_name += b
+                b_array = b_array[1:]
+                b = b_array[0:1].decode()
 
-        # ler ficheiros e seus blocos
-        d_array = d_array[4:]
-        d: Pombo = list()
-        for i in range(file_length):
-            # ler tamanho do nome do ficheiro
-            f_name_len = int.from_bytes(d_array[0:4], byteorder="big")
-
-            # ler nome do ficheiro
-            f_name = d_array[4:4 + f_name_len].decode()
-            d_array = d_array[4 + f_name_len:]
-
-            # ler tamanho do array de blocos
-            f_blocks_length = int.from_bytes(d_array[0:4], byteorder="big")
-
-            # ler blocos
+            # blocos
             f_blocks: set[tuple[int, bytes]] = set()
-            d_array = d_array[4:]
-            for j in range(f_blocks_length):
-                # (id, hash)
-                f_blocks.add(
-                    (int.from_bytes(d_array[0:4], byteorder="big"), bytes(d_array[4:24])))
-                # avancar para o proximo bloco (tuplo[int,bytes])
-                d_array = d_array[24:]
+            b_array = b_array[1:]
+            while len(b_array) > 0 and b_array[0:1].decode() != "\n":
+                # nr do bloco
+                block_nr = int.from_bytes(b_array[0:4], byteorder="big")
+                # hash do bloco
+                block_hash = bytes(b_array[4:24])
+                # adicionar bloco
+                f_blocks.add((block_nr, block_hash))
+                # avançar array
+                b_array = b_array[24:]
 
             # adicionar ficheiro e seus blocos
-            d.append((f_name, f_blocks))
+            p.append((f_name, f_blocks))
 
-        return d
+            # avançar array (para passar o \n)
+            if len(b_array) > 0:
+                b_array = b_array[1:]
+
+        return p
 
     # create protocol message
 
     @staticmethod
-    def __createTCPombo(chirp: bool, name: str, data: Pombo):
+    def __createTCPombo(chirp: bool, node: str, data: Pombo):
         # turn data into bytes
         d = TCPombo.__toBytes(data)
 
         # calculate length
-        # length, chirp, name length, name, payload
-        l = 4 + 1 + 4 + len(name) + len(d)
+        # length + chirp + node length + node + payload
+        l = 4 + 1 + 4 + len(node) + len(d)
 
         # create TCPombo
         tcpombo = bytearray()
         tcpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         tcpombo.append(chirp)  # chirp
-        tcpombo.extend(len(name).to_bytes(4, byteorder="big"))  # name length
-        tcpombo.extend(name.encode())  # name
+        tcpombo.extend(len(node).to_bytes(4, byteorder="big"))  # node length
+        tcpombo.extend(node.encode())  # node
         tcpombo.extend(d)  # data (in bytes)
 
         return tcpombo
 
     @staticmethod
-    def createChirp(name: str, data: Pombo):
-        return bytes(TCPombo.__createTCPombo(True, name, data))
+    def createChirp(node: str, data: Pombo):
+        return bytes(TCPombo.__createTCPombo(True, node, data))
 
     @staticmethod
-    def createCall(name: str, data: Pombo):
-        return bytes(TCPombo.__createTCPombo(False, name, data))
+    def createCall(node: str, data: Pombo):
+        return bytes(TCPombo.__createTCPombo(False, node, data))
 
     # gets
 
     @staticmethod
-    def getTCPombo(tcpombo: bytes):
-        return bytearray(tcpombo)
-
-    @staticmethod
     def isChirp(tcpombo: bytes):
-        return bool(TCPombo.getTCPombo(tcpombo)[4])
+        return bool(bytearray(tcpombo)[4])
 
     @staticmethod
     def getNameLength(tcpombo: bytes):
-        return int.from_bytes(TCPombo.getTCPombo(tcpombo)[5:4])
+        return int.from_bytes(bytearray(tcpombo)[5:4])
 
     @staticmethod
     def getName(tcpombo: bytes):
         nameLength = TCPombo.getNameLength(tcpombo)
-        return TCPombo.getTCPombo(tcpombo)[9:9+nameLength].decode()
+        return bytearray(tcpombo)[9:9+nameLength].decode()
 
     @staticmethod
     def getLength(tcpombo: bytes):
-        return int.from_bytes(TCPombo.getTCPombo(tcpombo)[0:4], byteorder="big")
+        return int.from_bytes(bytearray(tcpombo)[0:4], byteorder="big")
 
     # retorna o payload do protocolo (tudo menos os bytes referentes ao cabeçalho)
     @staticmethod
     def getData(tcpombo: bytes):
         overhead = 9 + TCPombo.getNameLength(tcpombo)
-        return TCPombo.__fromBytes(TCPombo.getTCPombo(tcpombo)[overhead:])
+        return TCPombo.__fromBytes(bytearray(tcpombo)[overhead:])
 
     # to string
     @staticmethod
