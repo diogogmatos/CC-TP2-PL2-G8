@@ -38,7 +38,7 @@ def connectServer(TCP_IP: str):
 
 # handle file transfer
 def handleTransfer(s: socket.socket, locations: Pombo):
-    print(locations)
+    print(TCPombo.toStringPombo(locations))
 
 
 # handle get command
@@ -48,16 +48,30 @@ def handleGet(s: socket.socket, file: str):
     message = TCPombo.createCall("", pombo)
     s.send(message)
 
-    # receive response
-    response = s.recv(BUFFER_SIZE)
-    locations = TCPombo.getData(response)
+    # receive & handle response
 
-    if locations == []:
-        print("File not found.")
-        return
+    # receive message length
+    data = s.recv(4)
 
-    # handle file transfer
-    handleTransfer(s, TCPombo.getData(response))
+    # if data was actually received, handle it
+    if data:
+        length = int.from_bytes(data, byteorder="big")
+        l = 4
+
+        # receive all the message, even if it's bigger than the buffer size
+        while l < length:
+            chunk = s.recv(BUFFER_SIZE)
+            l += len(chunk)
+            data += chunk
+
+        # check if file was found
+        locations = TCPombo.getPombo(data)
+        if locations == []:
+            print("File not found.")
+            return
+
+        # handle file transfer
+        handleTransfer(s, TCPombo.getPombo(data))
 
 
 def main():
@@ -81,11 +95,19 @@ def main():
     # TODO?: verificar se foram adicionados ficheiros ao folder de x em x tempo
     # (ficheiros adicionados manualmente à pasta e que não foram transferidos de outros nodes)
     # send available files in folder
-    files = os.listdir(folder)  # get list of file names
+
+    # Get a list of all the files and directories in the folder
+    files = os.listdir(folder)
+    # Filter the list to include only files
+    files = [file for file in files if os.path.isfile(
+        os.path.join(folder, file))]
+
     pombo: Pombo = []
     for file in files:
-        # create message
-        pombo.append((file, set()))
+        with open(folder + "/" + file, 'rb') as f:
+            f_bytes = f.read()
+            pombo.append((file, TCPombo.chunkify(f_bytes)))
+    # create message
     message = TCPombo.createChirp("", pombo)
     s.send(message)
 
