@@ -11,9 +11,13 @@ help:
 	@echo "Usage:"
 	@echo "  make run node <folder path> <server ip> - Run a Node"
 	@echo "  make run tracker - Run the Tracker"
+	@echo "  make run dns <folder path> - Run DNS Node
 
 run-node:
 	@$(PYTHON) -m src.FS_Node.main $(filter-out $@,$(MAKECMDGOALS))
 
 run-tracker:
 	@$(PYTHON) -m src.FS_Tracker.main
+
+run-dns:
+	@$(PYTHON) -m src.DNS_Node.main $(MAKECMDGOALS)
