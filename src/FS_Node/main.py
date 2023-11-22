@@ -174,6 +174,55 @@ def handleGet(s: socket.socket, file: str):
         # handle file transfer
         handleTransfer(s, file, TCPombo.getPombo(data))
 
+# Ainda não coloquei a função na main pq não quero foder o teu código
+
+def HandleServer(soc,lock):
+    while True:
+        conn, addr = soc.accept()
+
+        data = conn.recv(4)
+
+        # if data was actually received, handle it
+        if data:
+            length = int.from_bytes(data, byteorder="big")
+            l = 4
+
+            # receive all the message, even if it's bigger than the buffer size
+            while l < length:
+                chunks = conn.recv(BUFFER_SIZE)
+                l += len(chunks)
+                data += chunks
+
+            # Parser, isto deveria estar no UDPombo, mas como ainda são precisas ver algumas coisas vou deixar aqui que é mais fácil
+            # do q me ter de estar a preocupar com os argumentos das funções e cenas assim(e há algumas coisas q estou a achar
+            # estranho e q quero q me expliques), por isso fica aqui
+
+            timeStamp = UDPombo.getTimestamp(data)
+            fileName = UDPombo.getFileName(data)
+            chunksRequested = UDPombo.getData(data)
+
+            chunkLocation = 0
+
+            while chunkLocation < len(infoGotten):
+                # Inicializa variavel para poder usar na função toda
+                chunkData = None
+
+                # Vai ver todas as chunks que estamos a pedir à data e para cada uma delas vai ler essa chunk ao ficheiro
+                # Depois manda para o UDPombo para ser processada e passar para bytearray para poder ser enviada
+                # Btw, não sei se a flag é mesmo necessária, mas mesmo assim estou a mandar as coisas com a flag certa para n causar problemas
+
+                chunk = int.from_bytes(chunksRequested[chunkLocation:chunkLocation+4], byteorder="big")
+                if len(infoGotten) < (chunk*1024):
+                    with open(folder + "/" + fileName, 'rb') as f:
+                        f.seek((chunk-1)*1024)
+                        chunkData = f.read(1024)
+                else:
+                    with open(folder + "/" + fileName, 'rb') as f:
+                        f.seek((chunk-1)*1024)
+                        chunkData = f.read(len(infoGotten) - (chunk-1)*1024)
+
+                conn.send(bytes.UDPombo.create__UDPombo(1,chunk,fileName,chunkData,timeStamp))
+
 
 def main():
     if len(sys.argv) < 3:
