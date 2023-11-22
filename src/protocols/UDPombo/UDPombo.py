@@ -14,17 +14,22 @@ class UDPombo:
     # create protocol message
 
     @staticmethod
-    def __createUDPombo(chirp: bool, chunk: int, file: str, data: bytes):
+    def __createUDPombo(chirp: bool, chunk: int, file: str, data: bytes, timeStamp=0):
         # calculate length
         # length + chirp + timestamp + chunk + file name + \0 + data
-        l = 4 + 1 + 4 + 4 + len(file) + 1 + len(data)
+        l = 4 + 1 + 8 + 4 + len(file) + 1 + len(data)
 
         # create UDPombo
         udpombo = bytearray()
         udpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         udpombo.append(chirp)  # chirp
-        udpombo.extend(int(round(time.time() * 1000)
-                           ).to_bytes(4, byteorder="big"))  # timestamp
+
+        if timeStamp == 0:
+            udpombo.extend(int(round(time.time() * 1000)
+                               ).to_bytes(8, byteorder="big"))  # timestamp (long)
+        else:
+             udpombo.extend(timeStamp.to_bytes(8,byteorder='big'))
+        
         udpombo.extend(chunk.to_bytes(4, byteorder="big"))  # chunk
         udpombo.extend((file + "\0").encode())  # file name + \0
         udpombo.extend(data)
