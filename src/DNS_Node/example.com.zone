@@ -1,0 +1,20 @@
+$TTL 86400
+@       IN      SOA     ns1.example.com. admin.example.com. (
+                             2023111601     ; Serial
+                             3600           ; Refresh (1 hora)
+                             1800           ; Retry (30 minutos)
+                             604800         ; Expire (1 semana)
+                             86400          ; Minimum (1 dia)
+                             )
+        IN      NS      ns1.example.com.
+        IN      A       192.168.1.10
+ns1     IN      A       192.168.1.10
+www     IN      A       192.168.1.20
+
+
+;   $TTL: Time-to-Live for the entire zone (in seconds).
+;   @: Shorthand for the domain itself (example.com).
+;   SOA: Start of Authority record, specifying the primary nameserver (ns1.example.com.) and the administrator's email (admin.example.com.).
+;   NS: Name Server records, indicating authoritative nameservers for the domain.
+;   A: Address records, mapping hostnames to IPv4 addresses.
+;   MX: Mail Exchange record, specifying mail servers and their priority.

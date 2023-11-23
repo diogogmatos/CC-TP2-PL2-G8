@@ -18,16 +18,17 @@ UDP_PORT = 9090
 # set buffer size
 BUFFER_SIZE = 1024
 # Caminho do arquivo de zona
-zone_file_path = '/etc/bind/zones/example.com.zone'
+zone_file_path = '/etc/bind/zones/example.com.zone'         # ou isto: /etc/resolv.conf         é link simbólico para /run/systemd/resolve/stub-resolv.conf
 
-#In case domain does not exist 
-def handleChirp(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
+
+# Add a new domain name and IP address to the zone file
+def handleChirp(addr: tuple[str, int], data: bytes, lock: threading.Lock):
 
     # get requested file / file blocks
     requestedFile = UDPombo.getData(data)[0]
 
-    f_name = requestedFile[0]
-    new_ip = ''
+    f_name = requestedFile[0] # Domain name to be added to the zone file
+    new_ip = addr[0] # IP address to be associated with the domain name
     
     lock.acquire()
     try:
@@ -47,7 +48,7 @@ def handleChirp(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
 
 
 
-#In case domain exist 
+# Returns the IP address associated with a domain name in the zone file
 def handleCall(conn, data: bytes, lock: threading.Lock):
     # create message
     MESSAGE: Pombo 
@@ -83,6 +84,7 @@ def handleCall(conn, data: bytes, lock: threading.Lock):
     # send message
     conn.send(UDPombo.createChirp("", MESSAGE))
 
+
 # handle get command
 def handleNode(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
     # connection established print
@@ -109,12 +111,12 @@ def handleNode(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
             # print message
             print("\n" + UDPombo.toString(data))
 
-            # store the available files
+            # if the message is a chirp, add the new domain name and IP address to the zone file
             if (UDPombo.isChirp(data)):
                 handleChirp(addr, data, lock)
             # send the location of the requested file
             else:
-                handleCall(conn, addr, data, lock)
+                handleCall(conn, data, lock)
         # else, the client disconnected
         else:
             # disconnect print
@@ -128,11 +130,11 @@ def handleNode(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
 
 
 def main():
-    if len(sys.argv) < 3:
-        return False
-
+    #if len(sys.argv) < 3:
+    #    return False
+    #
     # get command arguments
-    folder = sys.argv[1]
+    #folder = sys.argv[1]
     #server_ip = sys.argv[2]
 
     # set server ip
@@ -164,9 +166,6 @@ def main():
     print("DNS Server Active @ " + UDP_IP + ":" + str(UDP_PORT))
     print("Listening...")
 
-    # Process the DNS query (replace this with your DNS logic)
-    # For simplicity, just print the received data
-    # wait & accept incoming connections
     while 1:
         # accept connection
         conn, addr = s.accept()
