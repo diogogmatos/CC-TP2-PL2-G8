@@ -1,5 +1,8 @@
+import socket
+
 from src.types.Pombo import Pombo  # tipo do payload do protocolo TCPombo
-from src.protocols.utils import chunkify
+
+BUFFER_SIZE = 1024
 
 class TCPombo:
     """
@@ -9,6 +12,24 @@ class TCPombo:
     - node name: used to carry the name of the node that sent the message
     - data: used to carry the payload of the message
     """
+
+    @staticmethod
+    def receiveTCPombo(s: socket.socket):
+        # receive message length
+        tcpombo = s.recv(4)
+
+        # if data was actually received
+        if tcpombo:
+            length = int.from_bytes(tcpombo, byteorder="big")
+            l = 4
+
+            # receive all the message, even if it's bigger than the buffer size
+            while l < length:
+                chunk = s.recv(BUFFER_SIZE)
+                l += len(chunk)
+                tcpombo += chunk
+        
+        return tcpombo
 
     # handle bytes
 
