@@ -3,6 +3,7 @@ import socket  # to send via tcp
 import os  # to get files in folder
 import threading
 import hashlib  # para calcular o hash dos blocos
+import signal
 
 # dicionário que guarda os chunks que já foram pedidos
 from src.FS_Node.AvailableChunks import AvailableChunks
@@ -243,29 +244,39 @@ def handleServer(folder: str):
     s.bind(('', UDP_PORT))
 
     # esperar, aceitar e responder a pedidos
-    while True:
+    run = True
+    while run:
         res_bytes: list[bytes] = []
         res_addr: list[tuple[str, int]] = []
         UDPombo.receiveUDPombo(s, res_bytes, res_addr)
         data = res_bytes[0]
         addr = res_addr[0]
 
-        print("\n\nServer:", UDPombo.toString(data))
+        if not UDPombo.isChirp(data):  
 
-        # se data não for vazio ou end of file
-        if data:
-            # obter informações do pedido
-            file = UDPombo.getFileName(data)
-            chunk_nr = UDPombo.getChunk(data)
+            print("\n\nServer:", UDPombo.toString(data))
 
-            # obter o chunk do ficheiro pedido
-            with open(folder + "/" + file, "rb") as f:
-                f.seek(chunk_nr * CHUNK_SIZE)
-                chunk_data = f.read(CHUNK_SIZE)
+            # se data não for vazio ou end of file
+            if data:
+                # obter informações do pedido
+                file = UDPombo.getFileName(data)
+                chunk_nr = UDPombo.getChunk(data)
 
-            # criar mensagem de resposta
-            message = UDPombo.createChirp(chunk_nr, file, chunk_data)
-            s.sendto(message, addr)
+                # obter o chunk do ficheiro pedido
+                with open(folder + "/" + file, "rb") as f:
+                    f.seek(chunk_nr * CHUNK_SIZE)
+                    chunk_data = f.read(CHUNK_SIZE)
+
+                # criar mensagem de resposta
+                message = UDPombo.createChirp(chunk_nr, file, chunk_data)
+                s.sendto(message, addr)
+
+        # received exit signal (empty chirp)
+        else:
+            run = False
+
+    # cleanup
+    s.close
 
 
 # MAIN
@@ -342,10 +353,14 @@ def main():
         else:
             print(fail_msg)
 
+    # cleanup
+    print("\nReceived exit signal. Flying away...")
+    # exit signal for udp server
+    socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(UDPombo.createChirp(0, "", b''), ('', UDP_PORT))
     # close connection
     tcp_socket.close()
     # stop server
-    t.join(timeout=0.1)
+    t.join()
 
 
 main()
