@@ -14,22 +14,22 @@ class UDPombo:
     """
 
     @staticmethod
-    def receiveUDPombo(s: socket.socket, result: list[bytes], address: list[tuple[str, int]] = None):
+    def receiveUDPombo(s: socket.socket, result: list[bytes], address: list[tuple[str, int]]):
         # receive message length
-        udpombo, addr = s.recvfrom(4)
+        udpombo, addr = s.recvfrom(5000)
 
-        if address:
-            address[0] = addr
+        if address != None:
+            address.append(addr)
 
-        if udpombo:
-            length = int.from_bytes(udpombo, byteorder="big")
-            l = 4
+        # if udpombo:
+        #     length = int.from_bytes(udpombo, byteorder="big")
+        #     l = 4
 
-            # receive all the message, even if it's bigger than the buffer size
-            while l < length:
-                chunk, _ = s.recvfrom(BUFFER_SIZE)
-                l += len(chunk)
-                udpombo += chunk
+        #     # receive all the message, even if it's bigger than the buffer size
+        #     while l < length:
+        #         chunk, _ = s.recvfrom(BUFFER_SIZE)
+        #         l += len(chunk)
+        #         udpombo += chunk
 
         result.append(udpombo)
 

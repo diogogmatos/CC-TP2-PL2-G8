@@ -1,31 +1,28 @@
-from typing import Dict  # to use typing for dictionaries
 import threading
+from typing import Dict
 
 class AvailableChunks:
     def __init__(self, chunkNr: int):
-        self.chunks: Dict[int, bool] = dict()
-        for i in range(0, chunkNr):
-            self.chunks[i] = False
-        self.lock = threading.Lock()
+        self.chunks: Dict[int, bool] = {i: False for i in range(chunkNr)}
+        self.lock = threading.RLock()
 
     def addAll(self, chunkNr: int, value: bool = False):
-        self.lock.acquire()
-        try:
-            for i in range(0, chunkNr):
+        with self.lock:
+            for i in range(chunkNr):
                 self.chunks[i] = value
-        finally:
-            self.lock.release()
 
     def handleChunk(self, chunk: int):
-        self.lock.acquire()
-        try:
-            self.chunks[chunk] = True
-        finally:
-            self.lock.release()
+        self.chunks[chunk] = True
 
     def isChunkHandled(self, chunk: int):
+        return self.chunks[chunk]
+
+    def getSize(self):
+        with self.lock:
+            return len(self.chunks.keys())
+        
+    def lockAquire(self):
         self.lock.acquire()
-        try:
-            return self.chunks[chunk]
-        finally:
-            self.lock.release()
+
+    def lockRelease(self):
+        self.lock.release()
