@@ -8,7 +8,7 @@ import signal
 # dicionário que guarda os chunks que já foram pedidos
 from src.FS_Node.AvailableChunks import AvailableChunks
 # TCPombo protocol payload
-from src.types.Pombo import Pombo
+from src.types.Pombo import PomboFiles, PomboLocations, PomboUpdate
 # TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 # UDPombo protocol
@@ -45,16 +45,9 @@ def connectServer(TCP_IP: str):
 # EXECUTING A GET
 
 
-# procurar a hash de um chunk
-def searchChunkHash(chunk_nr: int, chunks: set[tuple[int, bytes]]):
-    for c, h in chunks:
-        if c == chunk_nr:
-            return h
-
-
 # handle do processo de receber um chunk
 # NOTA: não sabe que chunk vai receber ent n sabe que chunk pedir quando faz timeout
-def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tuple[str,int], chunks: set[tuple[int, bytes]], folder: str, file_name: str, chunk_nr: int):
+def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tuple[str,int], folder: str, file_name: str, chunk_nr: int, expected_hash: bytes):
     valid = False
     limit = 5
 
@@ -63,6 +56,8 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
     
     # enquanto verificações não forem bem sucedidas
     while not valid and limit > 0:
+
+        valid = True
         
         # receber chunk
         res: list[bytes] = []  # variável para guardar o resultado da thread
@@ -85,7 +80,7 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
 
                 # verificar que o chunk é válido
                 calculated_hash = hashlib.sha1(UDPombo.getData(udpombo)).digest()
-                expected_hash = searchChunkHash(chunk_nr, chunks)
+                print("calculated hash:", calculated_hash.hex())
 
                 if calculated_hash == expected_hash:
 
@@ -97,30 +92,24 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
                         f.close()
 
                     # informar o tracker
-                    pombo: Pombo = list()
-                    pombo_chunks: set[tuple[int, bytes]] = {(chunk_nr, expected_hash)}
-                    pombo.append((file_name, pombo_chunks))
-                    message = TCPombo.createChirp("", pombo)
-                    tcp_socket.send(message)
-
-                    valid = True
+                    pomboUpdate = (file_name, chunk_nr)
+                    tcp_socket.send(TCPombo.createUpdateChirp("", pomboUpdate))
 
                 # se o chunk não é válido, reenviar pedido
                 else:
+                    valid = False
                     limit -= 1
                     print("- chunk", chunk_nr, "is invalid")
 
-                valid = True
-
             # se receber end of file, sair
             else:
+                valid = False
                 print("- end of file on chunk", chunk_nr)
                 return False
 
-            valid = True
-
         # se ocorrer timeout, reenviar pedido
         else:
+            valid = False
             limit -= 1
             print("- timeout on chunk", chunk_nr)
 
@@ -135,11 +124,11 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
 
 
 # calcular nº total de chunks
-def chunkNr(locations: Pombo):
+def chunkNr(locations: PomboLocations):
     i = 0
-    for (n, chunks) in locations:
+    for (_, chunks) in locations[0]:
         j = 0
-        for (c, h) in chunks:
+        for c in chunks:
             if c > j:
                 j = c
         if j > i:
@@ -148,7 +137,7 @@ def chunkNr(locations: Pombo):
 
 
 # efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file: str, location: tuple[str, set[tuple[int, bytes]]], availableChunks: AvailableChunks, folder: str):
+def handleChunkTransfer(tcp_socket: socket.socket, file: str, location: tuple[str, set[int]], hashes: list[bytes], availableChunks: AvailableChunks, folder: str):
     # criar socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -160,25 +149,23 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, location: tuple[st
         availableChunks.lockAquire()
 
         # verificar que chunk ainda não foi tratado
-        if not availableChunks.isChunkHandled(chunk[0]):
+        if not availableChunks.isChunkHandled(chunk):
 
             # marcar chunk como tratado
-            availableChunks.handleChunk(chunk[0])
+            availableChunks.handleChunk(chunk)
 
             # desbloquear acesso
             availableChunks.lockRelease()
 
             # adicionar chunk à lista de chunks visitados
-            handledChunks.append(chunk[0])
+            handledChunks.append(chunk)
 
             # enviar call para pedir chunk
-            CALL = UDPombo.createCall(chunk[0], file)
-            addr = tuple()
             addr = (location[0], UDP_PORT)
-            s.sendto(CALL, addr)
+            s.sendto(UDPombo.createCall(chunk, file), addr)
 
             # receber chunk pedido
-            receiveChunk(tcp_socket, s, addr, location[1], folder, file, chunk[0])
+            receiveChunk(tcp_socket, s, addr, folder, file, chunk, hashes[chunk])
 
     # receber respostas
     # for chunk in handledChunks:
@@ -186,7 +173,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, location: tuple[st
 
 
 # efetuar uma transferência
-def handleTransfer(tcp_socket: socket.socket, file: str, locations: Pombo, folder: str):
+def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str):
     availableChunks = AvailableChunks(chunkNr(locations))
 
     # criar o ficheiro e alocar o tamanho correto
@@ -200,9 +187,9 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: Pombo, folde
     threads: list[threading.Thread] = list()
 
     # criar threads para efetuar a transferência de chunks
-    for l in locations:
+    for l in locations[0]:
         t = threading.Thread(target=handleChunkTransfer,
-                             args=(tcp_socket, file, l, availableChunks, folder))
+                             args=(tcp_socket, file, l, locations[1], availableChunks, folder))
         t.start()
         threads.append(t)
 
@@ -214,23 +201,26 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: Pombo, folde
 # efetuar o comando "get"
 def handleGet(s: socket.socket, file: str, folder: str):
     # ask tracker for file locations
-    pombo: Pombo = [(file, set())]
-    message = TCPombo.createCall("", pombo)
-    s.send(message)
+    s.send(TCPombo.createCall("", file))
 
     # receive response
     data = TCPombo.receiveTCPombo(s)
-    print("\n\nGet:", TCPombo.toString(data))
 
-    if (data):
+    if data:
+
+        # print response
+        print("\n\nGet:", TCPombo.toString(data, True))
+
         # check if file was found
-        locations = TCPombo.getPombo(data)
-        if locations == []:
+        locations = TCPombo.getPomboLocations(data)
+        print("Locations:", TCPombo.bytesListToString(locations[1]))
+        print()
+        if locations[0] == []:
             print("File not found.")
             return
 
         # handle file transfer
-        handleTransfer(s, file, TCPombo.getPombo(data), folder)
+        handleTransfer(s, file, locations, folder)
 
 
 # SERVIDOR UDP
@@ -266,10 +256,11 @@ def handleServer(folder: str):
                 with open(folder + "/" + file, "rb") as f:
                     f.seek(chunk_nr * CHUNK_SIZE)
                     chunk_data = f.read(CHUNK_SIZE)
+                    print("chunk_data:", chunk_data)
+                    f.close()
 
                 # criar mensagem de resposta
-                message = UDPombo.createChirp(chunk_nr, file, chunk_data)
-                s.sendto(message, addr)
+                s.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
 
         # received exit signal (empty chirp)
         else:
@@ -312,7 +303,7 @@ def main():
     files = [file for file in files if os.path.isfile(
         os.path.join(folder, file))]
 
-    pombo: Pombo = []
+    pombo: PomboFiles = []
     for file in files:
 
         with open(folder + "/" + file, 'rb') as f:
@@ -322,11 +313,11 @@ def main():
             chunks = chunkify(f_bytes)
             # add file information to pombo
             pombo.append((file, chunks))
+            # close file
+            f.close()
 
-    # create message
-    message = TCPombo.createChirp("", pombo)
     # send message to tracker (inform about initial files in folder)
-    tcp_socket.send(message)
+    tcp_socket.send(TCPombo.createFilesChirp("", pombo))
 
     # handle server
     t = threading.Thread(target=handleServer, args=(folder,))
