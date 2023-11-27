@@ -10,7 +10,10 @@ from src.types.Pombo import Pombo
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 
-TCP_PORT = 9090
+# import TCP_PORT
+from src.protocols.utils import TCP_PORT
+
+# set tracker buffer size
 BUFFER_SIZE = 1024
 
 # type for the dictionary that stores the available files for each node
@@ -107,7 +110,7 @@ def handleDisconnect(addr: tuple[str, int], availableFiles: Flock, lock: threadi
 
 
 # handle a connection with a node
-def handleNode(conn, addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
+def handleNode(conn: socket.socket, addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
     # connection established print
     print("\nTCPombo Connection with Client @",
           addr[0] + ":" + str(addr[1]))

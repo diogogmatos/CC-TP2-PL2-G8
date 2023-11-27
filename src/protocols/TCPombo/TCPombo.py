@@ -1,8 +1,8 @@
+import socket
+
 from src.types.Pombo import Pombo  # tipo do payload do protocolo TCPombo
-import hashlib  # para calcular o hash dos blocos
 
-CHUNK_SIZE = 1024  # tamanho dos chunks em bytes
-
+BUFFER_SIZE = 1024
 
 class TCPombo:
     """
@@ -13,27 +13,23 @@ class TCPombo:
     - data: used to carry the payload of the message
     """
 
-    # handle file chunks
-
-    # obter o conjunto de blocos de um ficheiro e a hash de cada um
     @staticmethod
-    def chunkify(data: bytes) -> set[tuple[int, bytes]]:
-        data_array = bytearray(data)
+    def receiveTCPombo(s: socket.socket):
+        # receive message length
+        tcpombo = s.recv(4)
 
-        # create chunks
-        chunks: set[tuple[int, bytes]] = set()
-        i = 0
-        while i <= (len(data) // CHUNK_SIZE):
-            # (nr, hash)
-            chunks.add((i, hashlib.sha1(data_array[0:CHUNK_SIZE]).digest()))
-            data_array = data_array[CHUNK_SIZE:]
-            i += 1
+        # if data was actually received
+        if tcpombo:
+            length = int.from_bytes(tcpombo, byteorder="big")
+            l = 4
 
-        # deal with remaining bytes
-        if len(data_array) > 0:
-            chunks.add((i, hashlib.sha1(data_array).digest()))
-
-        return chunks
+            # receive all the message, even if it's bigger than the buffer size
+            while l < length:
+                chunk = s.recv(BUFFER_SIZE)
+                l += len(chunk)
+                tcpombo += chunk
+        
+        return tcpombo
 
     # handle bytes
 
