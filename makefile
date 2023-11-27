@@ -2,7 +2,7 @@
 .PHONY: run
 
 # Define the Python interpreter to use
-PYTHON = python
+PYTHON = python3.11
 
 # Targets and recipes
 run: help
