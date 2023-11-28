@@ -14,33 +14,33 @@ BUFFER_SIZE = 1024
 # Caminho do arquivo de zona
 # zone_file_path = '/etc/bind/zones/example.com.zone'         # ou isto: /etc/resolv.conf         é link simbólico para /run/systemd/resolve/stub-resolv.conf
 
+
+
+# Add a new domain name and IP address 
+def handleChirp(addr: tuple[str, int], name: str, lock: threading.Lock):
+    lock.acquire()
+    try:
+        dns_database[name] = addr[0]
+        print(f"Registered: {name} -> {addr[0]}")
+    finally:
+        lock.release()
+        
 # Returns the IP address associated with a domain name 
 def handleCall(conn, name: str, lock: threading.Lock):
     lock.acquire()
     try:
         if name in dns_database:
-            hashed_ip = dns_database[name]
-            print(f"IP address for {name}: {hashed_ip}")
-            conn.send(hashed_ip.encode('utf-8'))
+            ip = dns_database[name]
+            print(f"IP address for {name}: {ip}")
+            conn.send(ip.encode())
         else:
             print(f"name is not registered: {name}")
     finally:
         lock.release()
 
 
-# Add a new domain name and IP address 
-def handleChirp(addr: tuple[str, int], name: str, lock: threading.Lock):
-    lock.acquire
-    try:
-        # Calcular hash do IP (SHA-256)
-        hashed_ip = hashlib.sha256(addr[0].encode('utf-8')).hexdigest()
-        dns_database[name] = hashed_ip
-        print(f"Registered: {name} -> {hashed_ip}")
-    finally:
-        lock.release()
-
 # handle get command
-def handleNode(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
+def handleNode(conn, addr: tuple[str, int], lock: threading.Lock):
     # connection established print
     print("\nTCP Connection with Client @",
           addr[0] + ":" + str(addr[1]))
@@ -58,10 +58,10 @@ def handleNode(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
             
             # Add a new domain name and IP address
             if command == '0':
-                handleCall(conn, name, lock)
+                handleChirp(addr, name, lock)
             # Returns the IP address associated with a domain name 
             elif command == '1':
-                handleChirp(addr, name, lock)
+                handleCall(conn, name, lock)
             else:
                 print("Invalid command")
         # else, the client disconnected
@@ -78,9 +78,9 @@ def handleNode(conn, addr: tuple[str, int], data: bytes, lock: threading.Lock):
 
 def main():
     TCP_IP = ''
-    TCP_PORT = 9090
-   
-    # create a lock object, used to lock access to availableFiles between threads
+    TCP_PORT = 8080
+
+    # create a lock object
     lock = threading.Lock()
 
     # define a signal handler function

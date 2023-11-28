@@ -20,4 +20,4 @@ run-tracker:
 	@$(PYTHON) -m src.FS_Tracker.main
 
 run-dns:
-	@$(PYTHON) -m src.DNS_Node.main
+	@$(PYTHON) -m src.FS_DNS.main

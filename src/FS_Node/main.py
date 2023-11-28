@@ -2,6 +2,9 @@ import sys  # to get argument input
 import socket  # to send via tcp
 import os  # to get files in folder
 
+# dicionário que guarda os chunks que já foram pedidos
+from src.FS_Node.AvailableChunks import AvailableChunks
+from src.protocols import DNSUtils
 # TCPombo protocol payload
 from src.types.Pombo import Pombo
 
@@ -83,7 +86,7 @@ def main():
     server_ip = sys.argv[2]
 
     # set server ip
-    TCP_IP = server_ip
+    TCP_IP = DNSUtils.DNSUtils.getIp(server_ip)
 
     # establish connection with server
     try:
