@@ -1,6 +1,6 @@
 import socket
 
-from src.types.Pombo import PomboFiles, PomboLocations, PomboUpdate
+from src.protocols.types import PomboFiles, PomboLocations, PomboUpdate
 
 BUFFER_SIZE = 1024
 
@@ -99,12 +99,9 @@ class TCPombo:
         # adicionar as hahs's dos blocos do ficheiro pedido
         for h in data[1]:
             b_array.extend(h)
-            print("hash:", h.hex())
 
         # converter bytearray para bytes
         b = bytes(b_array)
-
-        print("BytesLocations in bytes:", b)
 
         return b
 
@@ -210,7 +207,6 @@ class TCPombo:
         while len(b_array) > 0:
             # hash do bloco
             block_hash = bytes(b_array[0:20])
-            print("hash lida em fromBytes:", block_hash.hex())
             # adicionar bloco
             p[1].append(block_hash)
             # avançar array

@@ -5,7 +5,7 @@ import threading  # to handle multiple connections
 from typing import Dict  # to use typing for dictionaries
 
 # TCPombo protocol payload type
-from src.types.Pombo import PomboLocations, PomboFiles, PomboUpdate
+from src.protocols.types import PomboLocations, PomboFiles, PomboUpdate
 
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
@@ -62,63 +62,59 @@ def removeHashes(p: PomboFiles) -> list[tuple[str, set[int]]]:
 
 
 # handle a chirp message
-def handleChirp(addr: tuple[str, int], availableFiles: Flock, fileHahses: HashFlock, data: bytes, lock: threading.Lock):
-    lock.acquire()
-    try:
+def handleChirp(addr: tuple[str, int], availableFiles: Flock, fileHashes: HashFlock, data: bytes, lock: threading.Lock):
+    # update chirp, adds new block to file
+    if TCPombo.isUpdate(data):
 
-        # update chirp, adds new block to file
-        if TCPombo.isUpdate(data):
+        update = TCPombo.getPomboUpdate(data)
 
-            update = TCPombo.getPomboUpdate(data)
+        with lock:
+            if update[0] not in availableFiles[addr]:
+                availableFiles[addr][update[0]] = set()
+
             availableFiles[addr][update[0]].add(update[1])
 
-        # files chirp, adds the initial files of a node
-        else:
+    # files chirp, adds the initial files of a node
+    else:
 
+        with lock:
             availableFiles[addr] = dict()
             pomboFiles = TCPombo.getPomboFiles(data)
 
             for f in pomboFiles:
 
                 blocks: set[int] = set()
-                fileHahses[f[0]] = [b''] * len(f[1])
+                fileHashes[f[0]] = [b''] * len(f[1])
 
                 for (block_nr, block_hash) in f[1]:
 
                     blocks.add(block_nr)
-                    fileHahses[f[0]][block_nr] = block_hash
-                    print("Added hash", block_hash.hex(), "to file", f[0])
+                    fileHashes[f[0]][block_nr] = block_hash
 
                 availableFiles[addr][f[0]] = blocks
-    
-    finally:
-        lock.release()
 
 
 # handle a call message
-def handleCall(conn, availableFiles: Flock, fileHahses: HashFlock, data: bytes, lock: threading.Lock):
+def handleCall(conn, availableFiles: Flock, fileHashes: HashFlock, data: bytes, lock: threading.Lock):
     # create message
     MESSAGE: PomboLocations = (list(), list())
 
     # get requested file / file blocks
     requestedFile = TCPombo.getPomboCall(data)
 
-    lock.acquire()
-    try:
+    # if the file exists
+    if requestedFile in fileHashes:
 
-        # get the locations of the requested file
-        for node in availableFiles:
-            for f_name, f_blocks in availableFiles[node].items():
-                if (f_name == requestedFile):
-                    MESSAGE[0].append((node[0], f_blocks))
+        with lock:
+            # get the locations of the requested file
+            for node in availableFiles:
+                for f_name, f_blocks in availableFiles[node].items():
+                    if (f_name == requestedFile):
+                        MESSAGE[0].append((node[0], f_blocks))
 
         # get the block hashes
-        for h in fileHahses[requestedFile]:
+        for h in fileHashes[requestedFile]:
             MESSAGE[1].append(h)
-            print("Added hash", h.hex(), "to message")
-
-    finally:
-        lock.release()
 
     # send message
     conn.send(TCPombo.createLocationsChirp(MESSAGE))

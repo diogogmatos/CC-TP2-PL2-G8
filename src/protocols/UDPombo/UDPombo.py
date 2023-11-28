@@ -21,16 +21,6 @@ class UDPombo:
         if address != None:
             address.append(addr)
 
-        # if udpombo:
-        #     length = int.from_bytes(udpombo, byteorder="big")
-        #     l = 4
-
-        #     # receive all the message, even if it's bigger than the buffer size
-        #     while l < length:
-        #         chunk, _ = s.recvfrom(BUFFER_SIZE)
-        #         l += len(chunk)
-        #         udpombo += chunk
-
         result.append(udpombo)
 
     # create protocol message
