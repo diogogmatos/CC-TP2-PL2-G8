@@ -3,6 +3,7 @@ import socket  # to send via tcp
 import os  # to get files in folder
 import threading
 import hashlib  # para calcular o hash dos blocos
+import select  # para verificar se ocorreu timeout
 
 # to use typing for dictionaries
 from typing import Dict
@@ -56,11 +57,11 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
         timeout = False
         
         # receber chunk
-        try:
-            udp_socket.settimeout(5)
-            udpombo, addr = udp_socket.recvfrom(10000)
-        except socket.timeout:
+        readable, _, _ = select.select([udp_socket], [], [], 5)
+        if not readable:
             timeout = True
+        else:
+            udpombo, addr = udp_socket.recvfrom(5000)
 
         # verificar que não ocorreu timeout
         if not timeout:
@@ -140,9 +141,8 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, dest_ip: str, chun
     addr = (dest_ip, UDP_PORT)
     s.sendto(UDPombo.createCall(chunksToTransfer, file), addr)
 
-    # pedir chunks do ficheiro
+    # receber chunks
     for chunk in chunksToTransfer:
-            
         receiveChunk(tcp_socket, s, addr, folder, file, chunk, hashes[chunk])
         
         # receber chunk pedido (paralelamente)
@@ -269,7 +269,7 @@ def handleServer(folder: str):
     while run:
 
         # receber pedido por UDPombo (bloqueante)   
-        data, addr = s.recvfrom(10000)
+        data, addr = s.recvfrom(5000)
 
         if not UDPombo.isChirp(data):
 
