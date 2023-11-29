@@ -104,7 +104,7 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
 
         # reenviar pedido se condições assim o pedirem
         if not valid and limit > 0:
-            udp_socket.sendto(UDPombo.createCall(chunk_nr, file_name), addr)
+            udp_socket.sendto(UDPombo.createCall([chunk_nr], file_name), addr)
 
     if limit > 0:
         print("- transfer succeeded:", chunk_nr)
@@ -132,19 +132,23 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, dest_ip: str, chun
     # array de threads
     threads: list[threading.Thread] = list()
 
+    # criar socket exclusiva ao chunk
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', 0))
+
+    # enviar call para pedir chunk
+    addr = (dest_ip, UDP_PORT)
+    s.sendto(UDPombo.createCall(chunk, file), addr)
+
     # pedir chunks do ficheiro
     for chunk in chunksToTransfer:
-
+            
             # criar socket exclusiva ao chunk
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.bind(('', 0))
-
-            # enviar call para pedir chunk
-            addr = (dest_ip, UDP_PORT)
-            s.sendto(UDPombo.createCall(chunk, file), addr)
+            receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            receive_socket.bind(('', 0))
             
             # receber chunk pedido (paralelamente)
-            t = threading.Thread(target=receiveChunk, args=(tcp_socket, s, addr, folder, file, chunk, hashes[chunk]))
+            t = threading.Thread(target=receiveChunk, args=(tcp_socket, receive_socket, addr, folder, file, chunk, hashes[chunk]))
             t.start()
             threads.append(t)
 

@@ -16,22 +16,32 @@ class UDPombo:
 
     @staticmethod
     def __toBytesCall(chunks: list[int]):
-        b_array = bytearray()
+        num_bits = max(chunks) + 1
 
+        # calculate the number of bytes needed
+        num_bytes = (num_bits + 7) // 8
+
+        # create a bytearray with the required number of bytes
+        b_array = bytearray(num_bytes)
+
+        # set the corresponding bits to 1
         for c in chunks:
-            b_array.extend(c.to_bytes(4, byteorder="big"))
+            byte_index = c // 8
+            bit_offset = c % 8
+            b_array[byte_index] |= 1 << (7 - bit_offset)
 
         return bytes(b_array)
     
     @staticmethod
     def __fromBytesCall(data: bytes) -> list[int]:
-        chunks: list[int] = list()
+        b_array = bytearray(data)
 
-        b_arrray = bytearray(data)
+        bits = ''.join(format(byte, '08b') for byte in b_array)
 
-        while len(b_arrray) > 0:
-            chunks.append(int.from_bytes(b_arrray[0:4], byteorder="big"))
-            b_arrray = b_arrray[4:]
+        chunks = []
+        for i, bit in enumerate(bits):
+            if bit == '1':
+                chunks.append(i)
 
         return chunks
     
