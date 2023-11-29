@@ -4,6 +4,7 @@ import os  # to get files in folder
 import threading
 import hashlib  # para calcular o hash dos blocos
 import select  # para verificar se ocorreu timeout
+import time
 
 # to use typing for dictionaries
 from typing import Dict
@@ -308,6 +309,8 @@ def handleServer(folder: str):
 
             # lidar com um pedido paralelamente
             threading.Thread(target=handleCall, args=(s, addr, folder, data)).start()
+
+            time.sleep(2)
 
         # received exit signal (empty chirp)
         else:
