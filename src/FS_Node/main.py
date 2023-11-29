@@ -136,7 +136,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, dest_ip: str, chun
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
 
-    # enviar call para pedir chunk
+    # enviar call para pedir chunks
     addr = (dest_ip, UDP_PORT)
     s.sendto(UDPombo.createCall(chunksToTransfer, file), addr)
 
