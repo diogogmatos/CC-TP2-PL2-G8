@@ -130,7 +130,7 @@ def chunkNr(locations: PomboLocations):
 # efetuar a tansferência de chunks de um node específico
 def handleChunkTransfer(tcp_socket: socket.socket, file: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
     # array de threads
-    threads: list[threading.Thread] = list()
+    # threads: list[threading.Thread] = list()
 
     # criar socket exclusiva ao chunk
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -143,18 +143,16 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, dest_ip: str, chun
     # pedir chunks do ficheiro
     for chunk in chunksToTransfer:
             
-            # criar socket exclusiva ao chunk
-            receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            receive_socket.bind(('', 0))
-            
-            # receber chunk pedido (paralelamente)
-            t = threading.Thread(target=receiveChunk, args=(tcp_socket, receive_socket, addr, folder, file, chunk, hashes[chunk]))
-            t.start()
-            threads.append(t)
+        receiveChunk(tcp_socket, s, addr, folder, file, chunk, hashes[chunk])
+        
+        # receber chunk pedido (paralelamente)
+        # t = threading.Thread(target=receiveChunk, args=(tcp_socket, s, addr, folder, file, chunk, hashes[chunk]))
+        # t.start()
+        # threads.append(t)
 
     # esperar que threads terminem
-    for t in threads:
-        t.join()
+    # for t in threads:
+    #     t.join()
 
 
 # calcular divisão de chunks por nodes
