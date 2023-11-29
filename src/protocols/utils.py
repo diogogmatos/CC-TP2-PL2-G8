@@ -8,7 +8,7 @@ TCP_PORT = 9090
 # set udp server port
 UDP_PORT = 9090
 # set timeout time
-TIMEOUT_TIME = 1
+TIMEOUT_TIME = 5
 
 def chunkify(data: bytes) -> set[tuple[int, bytes]]:
         data_array = bytearray(data)
