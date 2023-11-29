@@ -27,7 +27,7 @@ class TimeOutChunk(threading.Thread):
             self.limit -= 1
             self.send_chunk()
             self.run()
-        else:
+        elif self.limit == 0:
             print("- transfer failed:", self.chunk_nr)
 
     def run(self):
