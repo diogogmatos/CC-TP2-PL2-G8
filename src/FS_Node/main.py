@@ -139,11 +139,18 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     addr = (dest_ip, UDP_PORT)
     s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
 
+    print("- sent call for chunks")
+
     # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
     chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
 
+    print("- inicialized chunks to receive")
+
     # receber chunks
     while not chunksToReceive.isEmpty():
+
+        print("- waiting for chunks")
+
         # receber chunk
         udpombo, addr = s.recvfrom(5000)
 
@@ -179,6 +186,9 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
                 pomboUpdate = (file_name, data[0])
                 tcp_socket.send(TCPombo.createUpdateChirp("", pomboUpdate))
 
+                # mensagem de sucesso
+                print("- transfer succeeded:", data[0])
+
 
 # calcular divisão de chunks por nodes
 def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]:
@@ -207,18 +217,17 @@ def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]
 
 # efetuar uma transferência
 def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str):
-    # criar o ficheiro e alocar o tamanho correto
+    # criar o ficheiro
     with open(folder + "/" + file, 'wb') as f:
         f.write(b'\0')
         f.flush()
         f.close()
 
-    threads = list()
-
+    # calcular divisão de chunks por nodes
     divisionOfChunks = calculateDivisionOfChunks(locations)
-    print("\nDivision of chunks:", divisionOfChunks)
 
     # criar threads para efetuar o pedido de chunks a cada node
+    threads = list()
     for node, chunksToTransfer in divisionOfChunks.items():
         t = threading.Thread(target=handleChunkTransfer,
                              args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder))
@@ -260,14 +269,11 @@ def handleGet(s: socket.socket, file: str, folder: str):
 def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, udpombo: bytes):
     print("\nServer:", UDPombo.toString(udpombo))
 
-    print("addr:", addr)
-
     # se udpombo não for vazio ou end of file
     if udpombo:
         # obter informações do pedido
         file = UDPombo.getFileName(udpombo)
         chunks = UDPombo.getCallData(udpombo)
-        print("chunks:", chunks)
 
         # enviar chunks pedidos
         for chunk_nr in chunks:
@@ -280,6 +286,8 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
 
             # criar mensagem de resposta
             udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
+
+            print("- sent chunk", chunk_nr)
 
 
 # servidor UDP: recebe calls e responde com chirps

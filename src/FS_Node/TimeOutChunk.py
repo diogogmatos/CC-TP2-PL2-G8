@@ -13,6 +13,7 @@ class TimeOutChunk(threading.Thread):
         self.addr = (ip, UDP_PORT)
         self.udp_socket = udp_socket
         self.interrupted = False
+        self.limit = 5
 
     def interrupt(self):
         self.interrupted = True
@@ -21,10 +22,13 @@ class TimeOutChunk(threading.Thread):
         self.udp_socket.sendto(UDPombo.createCall([self.chunk_nr], self.file_name), self.addr)
 
     def timeout_handler(self):
-        if not self.interrupted:
+        if not self.interrupted and self.limit > 0:
             print("- timeout on chunk", self.chunk_nr)
+            limit -= 1
             self.send_chunk()
             self.run()
+        else:
+            print("- transfer failed:", self.chunk_nr)
 
     def run(self):
         time.sleep(TIMEOUT_TIME)
