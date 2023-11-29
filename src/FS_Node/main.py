@@ -279,6 +279,8 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
         # enviar chunks pedidos
         for chunk_nr in chunks:
 
+            time.sleep(2)
+
             # obter o chunk do ficheiro pedido
             with open(folder + "/" + file, "rb") as f:
                 f.seek(chunk_nr * CHUNK_SIZE)
@@ -309,8 +311,6 @@ def handleServer(folder: str):
 
             # lidar com um pedido paralelamente
             threading.Thread(target=handleCall, args=(s, addr, folder, data)).start()
-
-            time.sleep(2)
 
         # received exit signal (empty chirp)
         else:
