@@ -193,6 +193,7 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
     threads = list()
 
     divisionOfChunks = calculateDivisionOfChunks(locations)
+    print("\nDivision of chunks:", divisionOfChunks)
 
     # criar threads para efetuar a transferência de chunks
     for node, chunksToTransfer in divisionOfChunks.items():
@@ -236,11 +237,14 @@ def handleGet(s: socket.socket, file: str, folder: str):
 def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, udpombo: bytes):
     print("\nServer:", UDPombo.toString(udpombo))
 
+    print("addr:", addr)
+
     # se udpombo não for vazio ou end of file
     if udpombo:
         # obter informações do pedido
         file = UDPombo.getFileName(udpombo)
         chunks = UDPombo.getCallData(udpombo)
+        print("chunks:", chunks)
 
         # enviar chunks pedidos
         for chunk_nr in chunks:
@@ -267,7 +271,7 @@ def handleServer(folder: str):
     while run:
 
         # receber pedido por UDPombo (bloqueante)   
-        data, addr = s.recvfrom(5000)
+        data, addr = s.recvfrom(10000)
 
         if not UDPombo.isChirp(data):
 
