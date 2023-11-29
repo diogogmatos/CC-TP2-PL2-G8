@@ -24,7 +24,7 @@ class TimeOutChunk(threading.Thread):
     def timeout_handler(self):
         if not self.interrupted and self.limit > 0:
             print("- timeout on chunk", self.chunk_nr)
-            limit -= 1
+            self.limit -= 1
             self.send_chunk()
             self.run()
         else:
