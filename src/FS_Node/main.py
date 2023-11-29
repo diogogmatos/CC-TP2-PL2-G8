@@ -57,8 +57,8 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
         
         # receber chunk
         try:
-            udp_socket.settimeout(0.5)
-            udpombo, addr = udp_socket.recvfrom(5000)
+            udp_socket.settimeout(5)
+            udpombo, addr = udp_socket.recvfrom(10000)
         except socket.timeout:
             timeout = True
 
