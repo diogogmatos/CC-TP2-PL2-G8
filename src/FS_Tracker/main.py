@@ -2,7 +2,8 @@ import socket  # to send via tcp
 import signal  # to handle signals
 import sys  # to exit gracefully
 import threading  # to handle multiple connections
-from typing import Dict  # to use typing for dictionaries
+from typing import Dict
+from src.protocols import DNSUtils  # to use typing for dictionaries
 
 # TCPombo protocol payload type
 from src.types.Pombo import Pombo
@@ -175,6 +176,9 @@ def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', TCP_PORT))
     s.listen(5)  # 5 = max number of connections
+
+    #set new domain for server
+    DNSUtils.DNSUtils.setDomain("servidor")
 
     # server active print
     print("  ww")

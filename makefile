@@ -17,3 +17,6 @@ run-node:
 
 run-tracker:
 	@$(PYTHON) -m src.FS_Tracker.main
+
+run-dns:
+	@$(PYTHON) -m src.FS_DNS.main

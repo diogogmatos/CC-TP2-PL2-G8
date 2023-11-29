@@ -6,7 +6,8 @@ import hashlib  # para calcular o hash dos blocos
 import signal
 
 # dicionário que guarda os chunks que já foram pedidos
-from src.FS_Node.AvailableChunks import AvailableChunks
+from src.FS_Node import AvailableChunks
+from src.protocols import DNSUtils
 # TCPombo protocol payload
 from src.types.Pombo import Pombo
 # TCPombo protocol
@@ -291,7 +292,7 @@ def main():
     server_ip = sys.argv[2]
 
     # set server ip
-    TCP_IP = server_ip
+    TCP_IP = DNSUtils.DNSUtils.getIp(server_ip)
 
     # establish connection with server
     try:
