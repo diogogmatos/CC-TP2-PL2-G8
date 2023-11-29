@@ -5,7 +5,7 @@ import threading  # to handle multiple connections
 from typing import Dict  # to use typing for dictionaries
 
 # TCPombo protocol payload type
-from src.protocols.types import PomboLocations, PomboFiles, PomboUpdate
+from src.protocols.TCPombo.types import PomboLocations, PomboFiles, PomboUpdate
 
 # import TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo

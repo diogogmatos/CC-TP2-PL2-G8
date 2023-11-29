@@ -9,4 +9,4 @@ PomboFiles = list[tuple[str, set[tuple[int, bytes]]]]
 # tuplo com duas listas, uma com os nodes e os blocos que têm do ficheiro pedido,
 # e outra com as hash's dos blocos do ficheiro pedido
 # ex: ([("node1", {1, 2, 3}), ("node2", {2, 3, 4})], [hash1, hash2, hash3, hash4])
-PomboLocations = tuple[list[tuple[str, set[int]]], set[bytes]]
+PomboLocations = tuple[list[tuple[str, set[int]]], list[bytes]]

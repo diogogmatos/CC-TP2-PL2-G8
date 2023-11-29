@@ -4,10 +4,10 @@ import os  # to get files in folder
 import threading
 import hashlib  # para calcular o hash dos blocos
 
-# dicionário que guarda os chunks que já foram pedidos
-from src.FS_Node.AvailableChunks import AvailableChunks
+# to use typing for dictionaries
+from typing import Dict
 # TCPombo protocol payload
-from src.protocols.types import PomboFiles, PomboLocations, PomboUpdate
+from src.protocols.TCPombo.types import PomboFiles, PomboLocations, PomboUpdate
 # TCPombo protocol
 from src.protocols.TCPombo.TCPombo import TCPombo
 # UDPombo protocol
@@ -45,7 +45,6 @@ def connectServer(TCP_IP: str):
 
 
 # handle do processo de receber um chunk
-# NOTA: não sabe que chunk vai receber ent n sabe que chunk pedir quando faz timeout
 def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tuple[str,int], folder: str, file_name: str, chunk_nr: int, expected_hash: bytes):
     valid = False
     limit = 5 # limite de tentativas até considerar transferência do chunk falhada
@@ -70,15 +69,14 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
             if udpombo:
 
                 # verificar que o chunk é válido
-                calculated_hash = hashlib.sha1(UDPombo.getData(udpombo)).digest()
+                calculated_hash = hashlib.sha1(UDPombo.getChirpData(udpombo)[1]).digest()
 
                 if calculated_hash == expected_hash:
 
                     # escrever chunk para ficheiro
                     with open(folder + "/" + file_name, 'r+b') as f:
-
                         f.seek(chunk_nr * CHUNK_SIZE)
-                        f.write(UDPombo.getData(udpombo))
+                        f.write(UDPombo.getChirpData(udpombo)[1])
                         f.flush()
                         f.close()
 
@@ -113,6 +111,8 @@ def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tup
     else:
         print("- transfer failed:", chunk_nr)
 
+    udp_socket.close()
+
 
 # calcular nº total de chunks
 def chunkNr(locations: PomboLocations):
@@ -128,31 +128,19 @@ def chunkNr(locations: PomboLocations):
 
 
 # efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file: str, location: tuple[str, set[int]], hashes: list[bytes], availableChunks: AvailableChunks, folder: str):
+def handleChunkTransfer(tcp_socket: socket.socket, file: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
     # array de threads
     threads: list[threading.Thread] = list()
 
     # pedir chunks do ficheiro
-    for chunk in location[1]:
-
-        # bloquear acesso
-        availableChunks.lockAquire()
-
-        # verificar que chunk ainda não foi tratado
-        if not availableChunks.isChunkHandled(chunk):
-
-            # marcar chunk como tratado
-            availableChunks.handleChunk(chunk)
-
-            # desbloquear acesso
-            availableChunks.lockRelease()
+    for chunk in chunksToTransfer:
 
             # criar socket exclusiva ao chunk
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.bind(('', 0))
 
             # enviar call para pedir chunk
-            addr = (location[0], UDP_PORT)
+            addr = (dest_ip, UDP_PORT)
             s.sendto(UDPombo.createCall(chunk, file), addr)
             
             # receber chunk pedido (paralelamente)
@@ -165,23 +153,47 @@ def handleChunkTransfer(tcp_socket: socket.socket, file: str, location: tuple[st
         t.join()
 
 
+# calcular divisão de chunks por nodes
+def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]:
+    divisionOfChunks: Dict[str, list[int]] = {node: [] for node, _ in locations[0]}
+
+    # calcular nº total de chunks
+    totalChunks = chunkNr(locations)
+
+    assigned_numbers = set()
+
+    for _ in range(totalChunks):
+        for node, node_set in locations[0]:
+            if node not in divisionOfChunks:
+                divisionOfChunks[node] = []
+
+            available_numbers = node_set - set(divisionOfChunks[node]) - assigned_numbers
+
+            if available_numbers:
+                number = min(available_numbers)
+                divisionOfChunks[node].append(number)
+                assigned_numbers.add(number)
+                break
+    
+    return divisionOfChunks
+
+
 # efetuar uma transferência
 def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str):
-    availableChunks = AvailableChunks(chunkNr(locations))
-
     # criar o ficheiro e alocar o tamanho correto
     with open(folder + "/" + file, 'wb') as f:
-        f.seek(availableChunks.getSize()-1)
         f.write(b'\0')
         f.flush()
         f.close()
 
     threads = list()
 
+    divisionOfChunks = calculateDivisionOfChunks(locations)
+
     # criar threads para efetuar a transferência de chunks
-    for l in locations[0]:
+    for node, chunksToTransfer in divisionOfChunks.items():
         t = threading.Thread(target=handleChunkTransfer,
-                             args=(tcp_socket, file, l, locations[1], availableChunks, folder))
+                             args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder))
         t.start()
         threads.append(t)
 
@@ -217,23 +229,26 @@ def handleGet(s: socket.socket, file: str, folder: str):
 
 
 # receber e responder a um pedido de ficheiro
-def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, data: bytes):
-    print("\nServer:", UDPombo.toString(data))
+def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, udpombo: bytes):
+    print("\nServer:", UDPombo.toString(udpombo))
 
-    # se data não for vazio ou end of file
-    if data:
+    # se udpombo não for vazio ou end of file
+    if udpombo:
         # obter informações do pedido
-        file = UDPombo.getFileName(data)
-        chunk_nr = UDPombo.getChunk(data)
+        file = UDPombo.getFileName(udpombo)
+        chunks = UDPombo.getCallData(udpombo)
 
-        # obter o chunk do ficheiro pedido
-        with open(folder + "/" + file, "rb") as f:
-            f.seek(chunk_nr * CHUNK_SIZE)
-            chunk_data = f.read(CHUNK_SIZE)
-            f.close()
+        # enviar chunks pedidos
+        for chunk_nr in chunks:
 
-        # criar mensagem de resposta
-        udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
+            # obter o chunk do ficheiro pedido
+            with open(folder + "/" + file, "rb") as f:
+                f.seek(chunk_nr * CHUNK_SIZE)
+                chunk_data = f.read(CHUNK_SIZE)
+                f.close()
+
+            # criar mensagem de resposta
+            udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
 
 
 # servidor UDP: recebe calls e responde com chirps
@@ -247,17 +262,10 @@ def handleServer(folder: str):
     run = True
     while run:
 
-        # inicialização de variáveis para onde resultados serão escritos
-        res_bytes: list[bytes] = []
-        res_addr: list[tuple[str, int]] = []
-
         # receber pedido por UDPombo (bloqueante)   
-        UDPombo.receiveUDPombo(s, res_bytes, res_addr)
-        
-        data = res_bytes[0]
-        addr = res_addr[0]
+        data, addr = s.recvfrom(5000)
 
-        if not UDPombo.isChirp(data):  
+        if not UDPombo.isChirp(data):
 
             # lidar com um pedido paralelamente
             threading.Thread(target=handleCall, args=(s, addr, folder, data)).start()

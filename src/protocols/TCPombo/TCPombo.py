@@ -1,6 +1,6 @@
 import socket
 
-from src.protocols.types import PomboFiles, PomboLocations, PomboUpdate
+from src.protocols.TCPombo.types import PomboFiles, PomboLocations, PomboUpdate
 
 BUFFER_SIZE = 1024
 
@@ -26,7 +26,7 @@ class TCPombo:
 
             # receive all the message, even if it's bigger than the buffer size
             while l < length:
-                chunk = s.recv(BUFFER_SIZE)
+                chunk = s.recv(min(BUFFER_SIZE, length - l))
                 l += len(chunk)
                 tcpombo += chunk
 
