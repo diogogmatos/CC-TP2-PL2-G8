@@ -193,13 +193,11 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
     chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
 
-    print("- inicialized chunks to receive")
-
     # enviar call a pedir chunks
     addr = (dest_ip, UDP_PORT)
     s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
 
-    print("- sent call for chunks")
+    print("- sent call for chunks:", dest_ip)
 
     chunksToProcess = ChunksToProcess()
 
@@ -211,7 +209,6 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
 
     r.join()
     p.join()
-    print("- transfer succeeded:", file_name)
 
 
 # calcular divisão de chunks por nodes
@@ -261,6 +258,8 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
 
     for t in threads:
         t.join()
+
+    print("- transfer succeeded:", file)
 
 
 # efetuar o comando "get"
