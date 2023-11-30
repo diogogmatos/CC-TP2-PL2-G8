@@ -29,4 +29,5 @@ class TimeOutChunk(threading.Thread):
     def run(self):
         if not self.interrupt_event.wait(timeout=TIMEOUT_TIME):
             self.timeout_handler()
+        print("TIMEOUT CHUNK FINISHED")
         return
