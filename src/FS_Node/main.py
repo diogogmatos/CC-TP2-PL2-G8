@@ -351,7 +351,6 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
             udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
 
             print("- sent chunk", chunk_nr)
-            time.sleep(0.5)
 
 
 # servidor UDP: recebe calls e responde com chirps
