@@ -309,16 +309,10 @@ def main():
 
     pombo: PomboFiles = []
     for file in files:
-
-        with open(folder + "/" + file, 'rb') as f:
-
-            # obtain file information
-            f_bytes = f.read()
-            chunks = chunkify(f_bytes)
-            # add file information to pombo
-            pombo.append((file, chunks))
-            # close file
-            f.close()
+        # obtain file information
+        chunks = chunkify(folder + "/" + file)
+        # add file information to pombo
+        pombo.append((file, chunks))
 
     # send message to tracker (inform about initial files in folder)
     tcp_socket.send(TCPombo.createFilesChirp("", pombo))
