@@ -136,16 +136,16 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
 
+    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
+    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
+
+    print("- inicialized chunks to receive")
+
     # enviar call a pedir chunks
     addr = (dest_ip, UDP_PORT)
     s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
 
     print("- sent call for chunks")
-
-    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
-    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
-
-    print("- inicialized chunks to receive")
 
     # receber chunks
     while not chunksToReceive.isEmpty():
