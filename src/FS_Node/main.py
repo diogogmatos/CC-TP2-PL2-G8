@@ -181,7 +181,6 @@ def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToRe
         chunksToProcess.addChunk(udpombo)
         chunksToReceive -= 1
 
-    print("received all chunks")
     s.close()
 
 
@@ -211,9 +210,8 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     p.start()
 
     r.join()
-    print("received all chunks")
     p.join()
-    print("processed all chunks")
+    print("- transfer succeeded:", file_name)
 
 
 # calcular divisão de chunks por nodes
