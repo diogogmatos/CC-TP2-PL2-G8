@@ -177,7 +177,6 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
 
 def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: int):
     while chunksToReceive > 0:
-        print("is empty:", chunksToReceive.isEmpty())
         udpombo, _ = s.recvfrom(5000)
         chunksToProcess.addChunk(udpombo)
         chunksToReceive -= 1
