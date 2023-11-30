@@ -267,6 +267,11 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
 
 # efetuar o comando "get"
 def handleGet(s: socket.socket, file: str, folder: str):
+    # check if the file already exists
+    if os.path.isfile(folder + "/" + file):
+        print("\nFile already exists.")
+        return
+        
     # ask tracker for file locations
     s.send(TCPombo.createCall("", file))
 
@@ -277,11 +282,6 @@ def handleGet(s: socket.socket, file: str, folder: str):
 
         # print response
         print("\nGet:", TCPombo.toString(data, True))
-
-        # check if the file already exists
-        if os.path.isfile(folder + "/" + file):
-            print("\nFile already exists.")
-            return
 
         # check if file was found
         locations = TCPombo.getPomboLocations(data)
