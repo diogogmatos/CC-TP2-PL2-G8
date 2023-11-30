@@ -181,8 +181,6 @@ def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToRe
         chunksToProcess.addChunk(udpombo)
         chunksToReceive -= 1
 
-    s.close()
-
 
 # efetuar a tansferência de chunks de um node específico
 def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
@@ -209,6 +207,8 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
 
     r.join()
     p.join()
+
+    s.close()
 
 
 # calcular divisão de chunks por nodes
