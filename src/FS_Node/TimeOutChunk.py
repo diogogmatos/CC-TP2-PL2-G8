@@ -22,14 +22,12 @@ class TimeOutChunk(threading.Thread):
         self.udp_socket.sendto(UDPombo.createCall([self.chunk_nr], self.file_name), self.addr)
 
     def timeout_handler(self):
-        if not self.interrupted and self.limit > 0:
-            print("- timeout on chunk", self.chunk_nr)
-            self.limit -= 1
-            self.send_chunk()
-            self.run()
-        elif self.limit == 0:
-            print("- transfer failed:", self.chunk_nr)
+        print("- timeout on chunk", self.chunk_nr)
+        self.limit -= 1
+        self.send_chunk()
+        self.run()
 
     def run(self):
         time.sleep(TIMEOUT_TIME)
-        self.timeout_handler()
+        if not self.interrupted and self.limit > 0:
+            self.timeout_handler()
