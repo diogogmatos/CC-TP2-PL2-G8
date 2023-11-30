@@ -21,4 +21,5 @@ class ChunksToReceive:
         del self.dictionary[chunk_nr]
 
     def isEmpty(self):
-        return len(self.dictionary) == 0
+        with self.lock:
+            return len(self.dictionary) == 0

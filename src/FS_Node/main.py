@@ -16,7 +16,10 @@ from src.protocols.TCPombo.TCPombo import TCPombo
 from src.protocols.UDPombo.UDPombo import UDPombo
 # constants and utility functions
 from src.protocols.utils import TCP_PORT, UDP_PORT, CHUNK_SIZE, chunkify
+
 from src.FS_Node.ChunksToReceive import ChunksToReceive
+
+from src.FS_Node.ChunksToProcess import ChunksToProcess
 
 # TODO:
 # - fazer o node ser um servidor udp que atenda pedidos de outros nodes e informe o tracker de ficheiros recebidos
@@ -130,30 +133,10 @@ def chunkNr(locations: PomboLocations):
     return i + 1
 
 
-# efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
-    # criar socket udp
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('', 0))
-
-    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
-    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
-
-    print("- inicialized chunks to receive")
-
-    # enviar call a pedir chunks
-    addr = (dest_ip, UDP_PORT)
-    s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
-
-    print("- sent call for chunks")
-
-    # receber chunks
-    while not chunksToReceive.isEmpty():
-
-        print("- waiting for chunks")
-
-        # receber chunk
-        udpombo, addr = s.recvfrom(5000)
+def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive, folder: str, file_name: str, tcp_socket: socket.socket):
+    while not (chunksToProcess.isEmpty() and chunksToReceive.isEmpty()):
+        # pegar num chunk da fila de chunks a processar
+        udpombo = chunksToProcess.getChunk()
 
         # verificar que foi recebida informação
         if udpombo:
@@ -173,7 +156,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
                 # parar timeout
                 # info[1].interrupt()
 
-                # remover chunk da lista de chunks a receber
+                # remover chunk da fila de chunks a receber
                 chunksToReceive.removeChunk(data[0])
 
                 # escrever chunk para ficheiro
@@ -190,7 +173,84 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
                 # mensagem de sucesso
                 print("- transfer succeeded:", data[0])
 
+
+def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive):
+    while not chunksToReceive.isEmpty():
+        udpombo, addr = s.recvfrom(5000)
+        chunksToProcess.addChunk(udpombo, addr)
+
     s.close()
+
+
+# efetuar a tansferência de chunks de um node específico
+def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
+    # criar socket udp
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', 0))
+
+    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
+    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
+
+    print("- inicialized chunks to receive")
+
+    # enviar call a pedir chunks
+    addr = (dest_ip, UDP_PORT)
+    s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
+
+    print("- sent call for chunks")
+
+    chunksToProcess = ChunksToProcess()
+
+    r = threading.Thread(target=receiveChunks, args=(s, chunksToProcess, chunksToReceive))
+    r.start()
+
+    p = threading.Thread(target=processReceivedChunk, args=(chunksToProcess, chunksToReceive, folder, file_name, tcp_socket))
+    p.start()
+
+    # receber chunks
+    # while not chunksToReceive.isEmpty():
+
+    #     print("- waiting for chunks")
+
+    #     # receber chunk
+    #     udpombo, addr = s.recvfrom(5000)
+
+    #     # verificar que foi recebida informação
+    #     if udpombo:
+
+    #         # obter payload (chunk_nr, bytes)
+    #         data = UDPombo.getChirpData(udpombo)
+
+    #         # obter informação do chunk
+    #         info = chunksToReceive.getChunk(data[0])
+
+    #         # verificar que o chunk é válido
+    #         calculated_hash = hashlib.sha1(data[1]).digest()
+
+    #         # se o chunk é válido
+    #         if calculated_hash == info[0]:
+
+    #             # parar timeout
+    #             # info[1].interrupt()
+
+    #             # remover chunk da lista de chunks a receber
+    #             chunksToReceive.removeChunk(data[0])
+
+    #             # escrever chunk para ficheiro
+    #             with open(folder + "/" + file_name, 'r+b') as f:
+    #                 f.seek(data[0] * CHUNK_SIZE)
+    #                 f.write(data[1])
+    #                 f.flush()
+    #                 f.close()
+
+    #             # informar o tracker
+    #             pomboUpdate = (file_name, data[0])
+    #             tcp_socket.send(TCPombo.createUpdateChirp("", pomboUpdate))
+
+    #             # mensagem de sucesso
+    #             print("- transfer succeeded:", data[0])
+
+    # s.close()
 
 
 # calcular divisão de chunks por nodes
