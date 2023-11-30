@@ -16,6 +16,7 @@ class TimeOutChunk(threading.Thread):
         self.limit = 5
 
     def interrupt(self):
+        print("INTERRUPTED")
         self.interrupted = True
 
     def send_chunk(self):
