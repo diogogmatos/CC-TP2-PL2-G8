@@ -8,9 +8,9 @@ TCP_PORT = 9090
 # set udp server port
 UDP_PORT = 9090
 # set timeout time
-TIMEOUT_TIME = 5
+TIMEOUT_TIME = 1
 # set timeout limit
-TIMEOUT_LIMIT = 5
+TIMEOUT_LIMIT = 10
 
 # divide ficheiro em chunks e calcula as hashes respetivas
 def chunkify(data: bytes) -> set[tuple[int, bytes]]:
