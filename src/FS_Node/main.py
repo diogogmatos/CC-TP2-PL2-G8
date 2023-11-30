@@ -146,6 +146,15 @@ def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]
     # calcular nº total de chunks
     totalChunks = chunkNr(locations)
 
+    # se só um node tiver o ficheiro
+    if len(locations[0]) == 1:
+
+        for node, _ in locations[0]:
+            divisionOfChunks[node] = list(range(totalChunks))
+        
+        return divisionOfChunks
+
+    # caso contrário
     assigned_numbers = set()
 
     for _ in range(totalChunks):
