@@ -135,7 +135,6 @@ def chunkNr(locations: PomboLocations):
 
 def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive, folder: str, file_name: str, tcp_socket: socket.socket):
     while not (chunksToProcess.isEmpty() and chunksToReceive.isEmpty()):
-        print("p", chunksToProcess.isEmpty(), "r", chunksToReceive.isEmpty())
 
         # pegar num chunk da fila de chunks a processar
         udpombo = chunksToProcess.getChunk()
@@ -175,14 +174,13 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
                 # mensagem de sucesso
                 print("- transfer succeeded:", data[0])
 
-    print("p", chunksToProcess.isEmpty(), "r", chunksToReceive.isEmpty())
-
 
 def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive):
     while not chunksToReceive.isEmpty():
         udpombo, _ = s.recvfrom(5000)
         chunksToProcess.addChunk(udpombo)
 
+    print("received all chunks")
     s.close()
 
 
