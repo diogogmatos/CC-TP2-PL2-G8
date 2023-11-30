@@ -135,6 +135,8 @@ def chunkNr(locations: PomboLocations):
 
 def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive, folder: str, file_name: str, tcp_socket: socket.socket):
     while not (chunksToProcess.isEmpty() and chunksToReceive.isEmpty()):
+        print("p", chunksToProcess.isEmpty(), "r", chunksToReceive.isEmpty())
+
         # pegar num chunk da fila de chunks a processar
         udpombo = chunksToProcess.getChunk()
 
@@ -211,51 +213,6 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     print("received all chunks")
     p.join()
     print("processed all chunks")
-
-    # receber chunks
-    # while not chunksToReceive.isEmpty():
-
-    #     print("- waiting for chunks")
-
-    #     # receber chunk
-    #     udpombo, addr = s.recvfrom(5000)
-
-    #     # verificar que foi recebida informação
-    #     if udpombo:
-
-    #         # obter payload (chunk_nr, bytes)
-    #         data = UDPombo.getChirpData(udpombo)
-
-    #         # obter informação do chunk
-    #         info = chunksToReceive.getChunk(data[0])
-
-    #         # verificar que o chunk é válido
-    #         calculated_hash = hashlib.sha1(data[1]).digest()
-
-    #         # se o chunk é válido
-    #         if calculated_hash == info[0]:
-
-    #             # parar timeout
-    #             # info[1].interrupt()
-
-    #             # remover chunk da lista de chunks a receber
-    #             chunksToReceive.removeChunk(data[0])
-
-    #             # escrever chunk para ficheiro
-    #             with open(folder + "/" + file_name, 'r+b') as f:
-    #                 f.seek(data[0] * CHUNK_SIZE)
-    #                 f.write(data[1])
-    #                 f.flush()
-    #                 f.close()
-
-    #             # informar o tracker
-    #             pomboUpdate = (file_name, data[0])
-    #             tcp_socket.send(TCPombo.createUpdateChirp("", pomboUpdate))
-
-    #             # mensagem de sucesso
-    #             print("- transfer succeeded:", data[0])
-
-    # s.close()
 
 
 # calcular divisão de chunks por nodes
