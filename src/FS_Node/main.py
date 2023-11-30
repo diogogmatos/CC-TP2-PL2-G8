@@ -279,8 +279,6 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
         # enviar chunks pedidos
         for chunk_nr in chunks:
 
-            time.sleep(0.5)
-
             # obter o chunk do ficheiro pedido
             with open(folder + "/" + file, "rb") as f:
                 f.seek(chunk_nr * CHUNK_SIZE)
