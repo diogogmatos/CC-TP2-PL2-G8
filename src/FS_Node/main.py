@@ -175,7 +175,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
                 # mensagem de sucesso
                 print("- transfer succeeded:", data[0])
 
-        print("p", chunksToProcess.isEmpty(), "r", chunksToReceive.isEmpty())
+    print("p", chunksToProcess.isEmpty(), "r", chunksToReceive.isEmpty())
 
 
 def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive):
