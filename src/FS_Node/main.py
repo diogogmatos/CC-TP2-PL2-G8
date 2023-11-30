@@ -84,10 +84,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
             # se o chunk é válido
             if calculated_hash == info[0]:
 
-                # parar timeout
-                info[1].interrupt()
-
-                # remover chunk da fila de chunks a receber
+                # remover chunk da fila de chunks a receber e parar o seu timeout
                 chunksToReceive.removeChunk(data[0])
 
                 # escrever chunk para ficheiro
@@ -138,6 +135,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     r.join()
     p.join()
 
+    chunksToReceive.destroy()
     s.close()
 
 

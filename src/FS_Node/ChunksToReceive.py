@@ -20,8 +20,15 @@ class ChunksToReceive:
 
     def removeChunk(self, chunk_nr: int):
         with self.lock:
+            self.dictionary[chunk_nr][1].interrupt()
             del self.dictionary[chunk_nr]
 
     def isEmpty(self):
         with self.lock:
             return len(self.dictionary) == 0
+        
+    def destroy(self):
+        with self.lock:
+            for chunk in self.dictionary.values():
+                chunk[1].interrupt()
+            self.dictionary.clear()
