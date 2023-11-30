@@ -190,6 +190,8 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
                 # mensagem de sucesso
                 print("- transfer succeeded:", data[0])
 
+    s.close()
+
 
 # calcular divisão de chunks por nodes
 def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]:

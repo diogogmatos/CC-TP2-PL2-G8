@@ -1,6 +1,5 @@
 import threading
 import socket
-import time
 
 from src.protocols.UDPombo.UDPombo import UDPombo
 from src.protocols.utils import UDP_PORT, TIMEOUT_TIME
@@ -12,12 +11,12 @@ class TimeOutChunk(threading.Thread):
         self.file_name = file_name
         self.addr = (ip, UDP_PORT)
         self.udp_socket = udp_socket
-        self.interrupted = False
+        self.interrupt_event = threading.Event()
         self.limit = 5
 
     def interrupt(self):
         print("INTERRUPTED")
-        self.interrupted = True
+        self.interrupt_event.set()
 
     def send_chunk(self):
         self.udp_socket.sendto(UDPombo.createCall([self.chunk_nr], self.file_name), self.addr)
@@ -26,9 +25,7 @@ class TimeOutChunk(threading.Thread):
         print("- timeout on chunk", self.chunk_nr)
         self.limit -= 1
         self.send_chunk()
-        self.run()
 
     def run(self):
-        time.sleep(TIMEOUT_TIME)
-        if not self.interrupted and self.limit > 0:
+        if not self.interrupt_event.wait(timeout=TIMEOUT_TIME):
             self.timeout_handler()
