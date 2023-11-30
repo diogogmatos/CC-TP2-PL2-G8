@@ -2,7 +2,7 @@ import threading
 import socket
 
 from src.protocols.UDPombo.UDPombo import UDPombo
-from src.protocols.utils import UDP_PORT, TIMEOUT_TIME
+from src.protocols.utils import UDP_PORT
 
 class TimeOutChunk(threading.Thread):
     def __init__(self, chunk_nr: int, file_name: str, ip: str, udp_socket: socket.socket):
@@ -27,7 +27,8 @@ class TimeOutChunk(threading.Thread):
         self.send_chunk()
 
     def run(self):
-        if not self.interrupt_event.wait(timeout=TIMEOUT_TIME):
+        if not self.interrupt_event.wait(timeout=10):
             self.timeout_handler()
-        print("TIMEOUT CHUNK FINISHED")
+        else:
+            print("TIMEOUT CHUNK FINISHED")
         return
