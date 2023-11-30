@@ -154,7 +154,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
             if calculated_hash == info[0]:
 
                 # parar timeout
-                # info[1].interrupt()
+                info[1].interrupt()
 
                 # remover chunk da fila de chunks a receber
                 chunksToReceive.removeChunk(data[0])

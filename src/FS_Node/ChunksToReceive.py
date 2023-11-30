@@ -12,7 +12,7 @@ class ChunksToReceive:
         for c in chunks:
             timeout = TimeOutChunk(c, file, ip, udp_socket)
             self.dictionary[c] = (hashes[c], timeout)
-            # timeout.start()
+            timeout.start()
 
     def getChunk(self, chunk_nr: int):
         return self.dictionary.get(chunk_nr)
