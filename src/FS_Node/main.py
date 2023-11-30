@@ -250,13 +250,16 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
     # calcular divisão de chunks por nodes
     divisionOfChunks = calculateDivisionOfChunks(locations)
 
+    print("division of chunks:", divisionOfChunks)
+
     # criar threads para efetuar o pedido de chunks a cada node
     threads = list()
     for node, chunksToTransfer in divisionOfChunks.items():
-        t = threading.Thread(target=handleChunkTransfer,
-                             args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder))
-        t.start()
-        threads.append(t)
+        if chunksToTransfer != []:
+            t = threading.Thread(target=handleChunkTransfer,
+                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder))
+            t.start()
+            threads.append(t)
 
     for t in threads:
         t.join()
