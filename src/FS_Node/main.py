@@ -171,7 +171,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
             if calculated_hash == info[0]:
 
                 # parar timeout
-                info[1].interrupt()
+                # info[1].interrupt()
 
                 # remover chunk da lista de chunks a receber
                 chunksToReceive.removeChunk(data[0])
