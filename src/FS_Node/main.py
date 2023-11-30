@@ -207,6 +207,9 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     p = threading.Thread(target=processReceivedChunk, args=(chunksToProcess, chunksToReceive, folder, file_name, tcp_socket))
     p.start()
 
+    r.join()
+    p.join()
+
     # receber chunks
     # while not chunksToReceive.isEmpty():
 

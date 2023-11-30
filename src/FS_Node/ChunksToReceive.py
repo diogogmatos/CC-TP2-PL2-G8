@@ -15,10 +15,12 @@ class ChunksToReceive:
             timeout.start()
 
     def getChunk(self, chunk_nr: int):
-        return self.dictionary.get(chunk_nr)
+        with self.lock:
+            return self.dictionary.get(chunk_nr)
 
     def removeChunk(self, chunk_nr: int):
-        del self.dictionary[chunk_nr]
+        with self.lock:
+            del self.dictionary[chunk_nr]
 
     def isEmpty(self):
         with self.lock:
