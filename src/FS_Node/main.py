@@ -175,11 +175,12 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
                 print("- transfer succeeded:", data[0])
 
 
-def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: ChunksToReceive):
-    while not chunksToReceive.isEmpty():
+def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: int):
+    while chunksToReceive > 0:
         print("is empty:", chunksToReceive.isEmpty())
         udpombo, _ = s.recvfrom(5000)
         chunksToProcess.addChunk(udpombo)
+        chunksToReceive -= 1
 
     print("received all chunks")
     s.close()
@@ -204,7 +205,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
 
     chunksToProcess = ChunksToProcess()
 
-    r = threading.Thread(target=receiveChunks, args=(s, chunksToProcess, chunksToReceive))
+    r = threading.Thread(target=receiveChunks, args=(s, chunksToProcess, len(chunksToTransfer)))
     r.start()
 
     p = threading.Thread(target=processReceivedChunk, args=(chunksToProcess, chunksToReceive, folder, file_name, tcp_socket))
