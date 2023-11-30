@@ -34,4 +34,3 @@ class TimeOutChunk(threading.Thread):
                 self.timeout_handler()
         finally:
             print("EXITED TIMEOUT")
-            self.udp_socket.close()
