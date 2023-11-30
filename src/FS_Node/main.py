@@ -208,7 +208,9 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
     p.start()
 
     r.join()
+    print("received all chunks")
     p.join()
+    print("processed all chunks")
 
     # receber chunks
     # while not chunksToReceive.isEmpty():
