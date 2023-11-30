@@ -321,12 +321,12 @@ class TCPombo:
 
     # toString
 
-    @staticmethod
-    def bytesListToString(l: list[bytes]) -> list[str]:
-        r = list()
-        for b in l:
-            r.append(b.hex())
-        return r
+    # @staticmethod
+    # def bytesListToString(l: list[bytes]) -> list[str]:
+    #     r = list()
+    #     for b in l:
+    #         r.append(b.hex())
+    #     return r
 
     # TCPombo
     @staticmethod
@@ -344,8 +344,7 @@ class TCPombo:
                 r += " I now have block " + \
                     str(info[1]) + " from " + info[0] + "."
             elif tracker:
-                r += " The file you asked for is here:\n" + str(TCPombo.getPomboLocations(tcpombo)[0]) + str(
-                    TCPombo.bytesListToString(TCPombo.getPomboLocations(tcpombo)[1])) + "."
+                r += " The file you asked for is here:\n" + str(TCPombo.getPomboLocations(tcpombo)[0]) + "."
             else:
                 r += " I have the following files:\n" + \
                     str(TCPombo.getPomboFiles(tcpombo)) + "."
