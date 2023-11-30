@@ -277,15 +277,15 @@ def handleGet(s: socket.socket, file: str, folder: str):
 
     if data:
 
-        # print response
-        print("\nGet:", TCPombo.toString(data, True))
-
         # check if file was found
         locations = TCPombo.getPomboLocations(data)
 
         if locations[0] == []:
             print("\nFile not found.")
             return
+
+        # print response
+        print("\nGet:", TCPombo.toString(data, True))
 
         # handle file transfer
         handleTransfer(s, file, locations, folder)
