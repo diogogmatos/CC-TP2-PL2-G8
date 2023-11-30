@@ -2,7 +2,7 @@ import hashlib  # para calcular o hash dos blocos
 import math
 
 # tamanho dos chunks em bytes
-CHUNK_SIZE = 1024
+CHUNK_SIZE = 2048
 # set tracker port
 TCP_PORT = 9090
 # set udp server port

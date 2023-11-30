@@ -50,76 +50,6 @@ def connectServer(TCP_IP: str):
 # EXECUTING A GET
 
 
-# handle do processo de receber um chunk
-def receiveChunk(tcp_socket: socket.socket, udp_socket: socket.socket, addr: tuple[str,int], folder: str, file_name: str, chunk_nr: int, expected_hash: bytes):
-    valid = False
-    limit = 5 # limite de tentativas até considerar transferência do chunk falhada
-    
-    # enquanto verificações não forem bem sucedidas
-    while not valid and limit > 0:
-
-        valid = True
-        timeout = False
-        
-        # receber chunk
-        readable, _, _ = select.select([udp_socket], [], [], 5)
-        if not readable:
-            timeout = True
-        else:
-            udpombo, addr = udp_socket.recvfrom(5000)
-
-        # verificar que não ocorreu timeout
-        if not timeout:
-            
-            # verificar que foi recebida informação
-            if udpombo:
-
-                # verificar que o chunk é válido
-                calculated_hash = hashlib.sha1(UDPombo.getChirpData(udpombo)[1]).digest()
-
-                if calculated_hash == expected_hash:
-
-                    # escrever chunk para ficheiro
-                    with open(folder + "/" + file_name, 'r+b') as f:
-                        f.seek(chunk_nr * CHUNK_SIZE)
-                        f.write(UDPombo.getChirpData(udpombo)[1])
-                        f.flush()
-                        f.close()
-
-                    # informar o tracker
-                    pomboUpdate = (file_name, chunk_nr)
-                    tcp_socket.send(TCPombo.createUpdateChirp("", pomboUpdate))
-
-                # se o chunk não é válido, reenviar pedido
-                else:
-                    valid = False
-                    limit -= 1
-                    print("- chunk", chunk_nr, "is invalid")
-
-            # se receber end of file, sair
-            else:
-                valid = False
-                print("- end of file on chunk", chunk_nr)
-                return False
-
-        # se ocorrer timeout, reenviar pedido
-        else:
-            valid = False
-            limit -= 1
-            print("- timeout on chunk", chunk_nr)
-
-        # reenviar pedido se condições assim o pedirem
-        if not valid and limit > 0:
-            udp_socket.sendto(UDPombo.createCall([chunk_nr], file_name), addr)
-
-    if limit > 0:
-        print("- transfer succeeded:", chunk_nr)
-    else:
-        print("- transfer failed:", chunk_nr)
-
-    udp_socket.close()
-
-
 # calcular nº total de chunks
 def chunkNr(locations: PomboLocations):
     i = 0
@@ -177,7 +107,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
 
 def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: int):
     while chunksToReceive > 0:
-        udpombo, _ = s.recvfrom(5000)
+        udpombo, _ = s.recvfrom(10000)
         chunksToProcess.addChunk(udpombo)
         chunksToReceive -= 1
 
