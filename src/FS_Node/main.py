@@ -104,7 +104,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
 
 def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: int):
     while chunksToReceive > 0:
-        udpombo, _ = s.recvfrom(10000)
+        udpombo, _ = s.recvfrom(20000)
         chunksToProcess.addChunk(udpombo)
         chunksToReceive -= 1
 
@@ -259,7 +259,7 @@ def handleServer(folder: str):
     while run:
 
         # receber pedido por UDPombo (bloqueante)   
-        data, addr = s.recvfrom(5000)
+        data, addr = s.recvfrom(20000)
 
         if not UDPombo.isChirp(data):
 
