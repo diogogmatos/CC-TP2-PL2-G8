@@ -15,7 +15,6 @@ class TimeOutChunk(threading.Thread):
         self.limit = 5
 
     def interrupt(self):
-        print("INTERRUPTED TIMEOUT", self.chunk_nr)
         self.interrupt_event.set()
 
     def send_chunk(self):
@@ -28,9 +27,5 @@ class TimeOutChunk(threading.Thread):
         self.run()
 
     def run(self):
-        try:
-            if not self.interrupt_event.wait(timeout=TIMEOUT_TIME):
-                print("PROCEEDED WITH TIMEOUT", self.chunk_nr)
-                self.timeout_handler()
-        finally:
-            print("EXITED TIMEOUT", self.chunk_nr)
+        if not self.interrupt_event.wait(timeout=TIMEOUT_TIME):
+            self.timeout_handler()
