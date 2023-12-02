@@ -1,0 +1,13 @@
+$ORIGIN 1.1.10.in-addr.arpa.
+; Bind reverse
+$TTL 1d
+@       IN SOA Servidor1.local. admin.local. (
+                2023012301 ; serial
+                8h         ; refresh
+                2h         ; retry
+                4w         ; expire
+                1h         ; minimum
+              )
+@       IN NS   Servidor1.local.
+1       IN PTR  Portatil1
+2       IN PTR  Portatil2
