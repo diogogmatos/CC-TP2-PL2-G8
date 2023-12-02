@@ -207,7 +207,7 @@ def main():
 
         # start a new thread to handle the connection
         threading.Thread(target=handleNode, args=(
-            conn, addr, availableFiles, fileHashes, lock)).start()
+            conn, addr[0], availableFiles, fileHashes, lock)).start()
 
 
 main()
