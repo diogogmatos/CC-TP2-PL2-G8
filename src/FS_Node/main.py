@@ -96,7 +96,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
 
                 # informar o tracker
                 pomboUpdate = (file_name, data[0])
-                tcp_socket.send(TCPombo.createUpdateChirp("", pomboUpdate))
+                tcp_socket.send(TCPombo.createUpdateChirp(pomboUpdate))
 
                 # mensagem de sucesso
                 print("- transfer succeeded:", data[0])
@@ -110,10 +110,13 @@ def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToRe
 
 
 # efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
+def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
     # criar socket udp
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
+
+    # obter ip do node
+    dest_ip = socket.gethostbyname(node_name)
 
     # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
     chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
@@ -207,7 +210,7 @@ def handleGet(s: socket.socket, file: str, folder: str):
         return
         
     # ask tracker for file locations
-    s.send(TCPombo.createCall("", file))
+    s.send(TCPombo.createCall(file))
 
     # receive response
     data = TCPombo.receiveTCPombo(s)
@@ -324,7 +327,7 @@ def main():
         pombo.append((file, chunks))
 
     # send message to tracker (inform about initial files in folder)
-    tcp_socket.send(TCPombo.createFilesChirp("", pombo))
+    tcp_socket.send(TCPombo.createFilesChirp(pombo))
 
     # handle server
     t = threading.Thread(target=handleServer, args=(folder,))

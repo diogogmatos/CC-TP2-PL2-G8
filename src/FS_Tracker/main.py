@@ -62,23 +62,23 @@ def removeHashes(p: PomboFiles) -> list[tuple[str, set[int]]]:
 
 
 # handle a chirp message
-def handleChirp(addr: tuple[str, int], availableFiles: Flock, fileHashes: HashFlock, data: bytes, lock: threading.Lock):
+def handleChirp(node: str, availableFiles: Flock, fileHashes: HashFlock, data: bytes, lock: threading.Lock):    
     # update chirp, adds new block to file
     if TCPombo.isUpdate(data):
 
         update = TCPombo.getPomboUpdate(data)
 
         with lock:
-            if update[0] not in availableFiles[addr]:
-                availableFiles[addr][update[0]] = set()
+            if update[0] not in availableFiles[node]:
+                availableFiles[node][update[0]] = set()
 
-            availableFiles[addr][update[0]].add(update[1])
+            availableFiles[node][update[0]].add(update[1])
 
     # files chirp, adds the initial files of a node
     else:
 
         with lock:
-            availableFiles[addr] = dict()
+            availableFiles[node] = dict()
             pomboFiles = TCPombo.getPomboFiles(data)
 
             for f in pomboFiles:
@@ -91,7 +91,7 @@ def handleChirp(addr: tuple[str, int], availableFiles: Flock, fileHashes: HashFl
                     blocks.add(block_nr)
                     fileHashes[f[0]][block_nr] = block_hash
 
-                availableFiles[addr][f[0]] = blocks
+                availableFiles[node][f[0]] = blocks
 
 
 # handle a call message
@@ -121,20 +121,21 @@ def handleCall(conn, availableFiles: Flock, fileHashes: HashFlock, data: bytes, 
 
 
 # handle a node being disconnected: remove it from availableFiles
-def handleDisconnect(addr: tuple[str, int], availableFiles: Flock, lock: threading.Lock):
+def handleDisconnect(node: str, availableFiles: Flock, lock: threading.Lock):
     lock.acquire()
     try:
-        if (addr in availableFiles):
-            del availableFiles[addr]
+        if (node in availableFiles):
+            del availableFiles[node]
     finally:
         lock.release()
 
 
 # handle a connection with a node
-def handleNode(conn: socket.socket, addr: tuple[str, int], availableFiles: Flock, fileHashes: HashFlock, lock: threading.Lock):
+def handleNode(conn: socket.socket, ip: str, availableFiles: Flock, fileHashes: HashFlock, lock: threading.Lock):
+    hostname = socket.gethostbyaddr(ip)[0]
+    
     # connection established print
-    print("\nTCPombo Connection with Client @",
-          addr[0] + ":" + str(addr[1]))
+    print("\nTCPombo Connection with", hostname, "@", ip)
 
     # listen for messages from client
     run = True
@@ -150,7 +151,7 @@ def handleNode(conn: socket.socket, addr: tuple[str, int], availableFiles: Flock
 
             # store the available files
             if (TCPombo.isChirp(data)):
-                handleChirp(addr, availableFiles, fileHashes, data, lock)
+                handleChirp(hostname, availableFiles, fileHashes, data, lock)
 
             # send the location of the requested file
             else:
@@ -159,14 +160,13 @@ def handleNode(conn: socket.socket, addr: tuple[str, int], availableFiles: Flock
         # else, the client disconnected
         else:
             # disconnect print
-            print("\nClient @", addr[0] + ":" +
-                  str(addr[1]), "disconnected.")
+            print("\n" + hostname, "@", ip, "disconnected.")
             run = False
 
     # close connection
     conn.close()
     # remove node from availableFiles
-    handleDisconnect(addr, availableFiles, lock)
+    handleDisconnect(hostname, availableFiles, lock)
 
 
 # main function

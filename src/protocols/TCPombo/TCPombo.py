@@ -10,7 +10,6 @@ class TCPombo:
     ### TCPombo Protocol
     - length: used to carry the length of the segment in bytes
     - chirp: flag used to send a chirp or a call, i.e. used to communicate information or request information
-    - node name: used to carry the name of the node that sent the message
     - data: used to carry the payload of the message
     """
 
@@ -236,36 +235,35 @@ class TCPombo:
     # create protocol message
 
     @staticmethod
-    def __createTCPombo(chirp: bool, update: bool, node: str, data: bytes):
+    def __createTCPombo(chirp: bool, update: bool, data: bytes):
         # calculate length
-        # length + chirp + update? + node name + \0 + payload
-        l = 4 + 1 + (1 if update else 0) + len(node) + 1 + len(data)
+        # length + chirp + update? + payload
+        l = 4 + 1 + (1 if update else 0) + len(data)
 
         # create TCPombo
         tcpombo = bytearray()
         tcpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         tcpombo.append(chirp)  # chirp
-        tcpombo.append(update) if update else None  # update
-        tcpombo.extend((node + "\0").encode())  # node name + \0
+        tcpombo.append(update) if update else None  # update?
         tcpombo.extend(data)  # data
 
         return tcpombo
 
     @staticmethod
-    def createUpdateChirp(node: str, data: PomboUpdate):
-        return bytes(TCPombo.__createTCPombo(True, True, node, TCPombo.__toBytesUpdate(data)))
+    def createUpdateChirp(data: PomboUpdate):
+        return bytes(TCPombo.__createTCPombo(True, True, TCPombo.__toBytesUpdate(data)))
 
     @staticmethod
-    def createFilesChirp(node: str, data: PomboFiles):
-        return bytes(TCPombo.__createTCPombo(True, False, node, TCPombo.__toBytesFiles(data)))
+    def createFilesChirp(data: PomboFiles):
+        return bytes(TCPombo.__createTCPombo(True, False, TCPombo.__toBytesFiles(data)))
 
     @staticmethod
     def createLocationsChirp(data: PomboLocations):
-        return bytes(TCPombo.__createTCPombo(True, False, "", TCPombo.__toBytesLocations(data)))
+        return bytes(TCPombo.__createTCPombo(True, False, TCPombo.__toBytesLocations(data)))
 
     @staticmethod
-    def createCall(node: str, data: str):
-        return bytes(TCPombo.__createTCPombo(False, False, node, data.encode()))
+    def createCall(data: str):
+        return bytes(TCPombo.__createTCPombo(False, False, data.encode()))
 
     # gets
 
@@ -283,23 +281,9 @@ class TCPombo:
         return bool(bytearray(tcpombo)[4]) and bool(bytearray(tcpombo)[5])
 
     @staticmethod
-    def getName(tcpombo: bytes):
-        b_array = (bytearray(tcpombo)[6:] if TCPombo.isUpdate(
-            tcpombo) else bytearray(tcpombo)[5:])
-
-        f_name = ""
-        b: str = b_array[0:1].decode()
-        while b != "\0":
-            f_name += b
-            b_array = b_array[1:]
-            b = b_array[0:1].decode()
-
-        return f_name
-
-    @staticmethod
     def getOverheadLen(tcpombo: bytes):
-        # length + chirp + update? + node name + \0
-        return 5 + (1 if TCPombo.isUpdate(tcpombo) else 0) + len(TCPombo.getName(tcpombo)) + 1
+        # length + chirp + update?
+        return 4 + 1 + (1 if TCPombo.isUpdate(tcpombo) else 0)
 
     # gets do payload
 
