@@ -5,6 +5,7 @@ import threading
 import hashlib  # para calcular o hash dos blocos
 import select  # para verificar se ocorreu timeout
 import time
+import math
 
 # to use typing for dictionaries
 from typing import Dict
@@ -110,7 +111,7 @@ def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToRe
 
 
 # efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
+def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str, trackerEficiency):
     # criar socket udp
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
@@ -140,7 +141,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, dest_ip: str,
 
 
 # calcular divisão de chunks por nodes
-def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]:
+def calculateDivisionOfChunks(tcp_socket, file, node, chunksToTransfer, folder, locations: PomboLocations, trackerEficiency: Dict[str, tuple(float,int, int)]) -> Dict[str, list[int]]:
     divisionOfChunks: Dict[str, list[int]] = {node: [] for node, _ in locations[0]}
 
     # calcular nº total de chunks
@@ -157,7 +158,46 @@ def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]
     # caso contrário
     assigned_numbers = set()
 
-    for _ in range(totalChunks):
+    '''
+    for i in range(totalChunks):
+        usable: set[str] = []
+        threads = list()
+        for node, node_set in locations[0]:
+            if node not in divisionOfChunks:
+                divisionOfChunks[node] = []
+            if i in node_set:
+                usable.add(node)
+            t1, t2, t3 = trackerEficiency[node]
+            if t2 == 0:
+                chunksToTransfer = list()
+                chunksToTransfer.append(i)
+                t = threading.Thread(target=handleChunkTransfer,
+                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder, trackerEficiency))
+                t.start()
+                threads.append(t)
+                for t in threads:
+                    t.join()
+
+        if len(usable) == 0:
+            continue
+        elif len(usable) == 1:
+            divisionOfChunks[usable[0]].append(i)
+            continue
+
+        better= usable[0]
+        for n in range(usable)-1:
+            ta1, ta2, ta3 = trackerEficiency[usable[n]]
+            tb1, tb2, tb3 = trackerEficiency[usable[n]]
+            val = ta1* (ta2/ta3) / tb1* (tb2/tb3)
+            if abs((len(divisionOfChunks[usable[n]])+1)/(len(divisionOfChunks[usable[n+1]])) - val) > abs((len(divisionOfChunks[usable[n]]))/(len(divisionOfChunks[usable[n+1]])+1) - val):
+                better = usable[n]
+            else:
+                better = usable[n+1]
+        divisionOfChunks[better].append(i)
+    '''
+
+
+    for i in range(totalChunks):
         for node, node_set in locations[0]:
             if node not in divisionOfChunks:
                 divisionOfChunks[node] = []
@@ -172,24 +212,30 @@ def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]
     
     return divisionOfChunks
 
+def fillTrackerEfficiency(locations: PomboLocations, trackerEficiency):
+    for node in locations[0]:
+        if node not in trackerEficiency:
+            trackerEficiency[node] = (0,(0,0))
 
 # efetuar uma transferência
-def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str):
+def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str, trackerEficiency:Dict[str, tuple(float,int, int)]):
     # criar o ficheiro
     with open(folder + "/" + file, 'wb') as f:
         f.write(b'\0')
         f.flush()
         f.close()
 
+    fillTrackerEfficiency(locations, trackerEficiency)
+
     # calcular divisão de chunks por nodes
-    divisionOfChunks = calculateDivisionOfChunks(locations)
+    divisionOfChunks = calculateDivisionOfChunks(locations, trackerEficiency)
 
     # criar threads para efetuar o pedido de chunks a cada node
     threads = list()
     for node, chunksToTransfer in divisionOfChunks.items():
         if chunksToTransfer != []:
             t = threading.Thread(target=handleChunkTransfer,
-                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder))
+                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder, trackerEficiency))
             t.start()
             threads.append(t)
 
@@ -200,7 +246,7 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
 
 
 # efetuar o comando "get"
-def handleGet(s: socket.socket, file: str, folder: str):
+def handleGet(s: socket.socket, file: str, folder: str, trackerEficiency):
     # check if the file already exists
     if os.path.isfile(folder + "/" + file):
         print("\nFile already exists.")
@@ -225,7 +271,7 @@ def handleGet(s: socket.socket, file: str, folder: str):
         print("\nGet:", TCPombo.toString(data, True))
 
         # handle file transfer
-        handleTransfer(s, file, locations, folder)
+        handleTransfer(s, file, locations, folder, trackerEficiency)
 
 
 # SERVIDOR UDP
@@ -286,7 +332,7 @@ def handleServer(folder: str):
 # MAIN
 
 
-def main():
+def main():   
     if len(sys.argv) < 3:
         return False
 
@@ -315,6 +361,8 @@ def main():
     # filter the list to include only files (exclude folders)
     files = [file for file in files if os.path.isfile(
         os.path.join(folder, file))]
+
+    trackerEficiency: Dict[str, tuple(float,int, int)] = {}
 
     pombo: PomboFiles = []
     for file in files:
@@ -346,7 +394,7 @@ def main():
 
         elif parameters[0] == "get":
             file = parameters[1]
-            handleGet(tcp_socket, file, folder)
+            handleGet(tcp_socket, file, folder,trackerEficiency)
         
         else:
             print(fail_msg)
