@@ -3,26 +3,23 @@ import socket  # to send via tcp
 import os  # to get files in folder
 import threading
 import hashlib  # para calcular o hash dos blocos
-import select  # para verificar se ocorreu timeout
-import time
 
+# dns functions
+import src.dns as dns
 # to use typing for dictionaries
 from typing import Dict
 # TCPombo protocol payload
-from src.protocols.TCPombo.types import PomboFiles, PomboLocations, PomboUpdate
+from src.protocols.types import PomboFiles, PomboLocations, PomboUpdate
 # TCPombo protocol
-from src.protocols.TCPombo.TCPombo import TCPombo
+from src.protocols.TCPombo import TCPombo
 # UDPombo protocol
-from src.protocols.UDPombo.UDPombo import UDPombo
+from src.protocols.UDPombo import UDPombo
 # constants and utility functions
 from src.protocols.utils import TCP_PORT, UDP_PORT, CHUNK_SIZE, chunkify
-
+# data structure to store chunks to receive
 from src.FS_Node.ChunksToReceive import ChunksToReceive
-
+# data structure to store chunks to process
 from src.FS_Node.ChunksToProcess import ChunksToProcess
-
-# TODO:
-# - fazer o node ser um servidor udp que atenda pedidos de outros nodes e informe o tracker de ficheiros recebidos
 
 
 # TRACKER RELATED

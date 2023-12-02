@@ -1,0 +1,20 @@
+$ORIGIN local.
+$TTL 1d
+@       IN SOA  Servidor1.local. admin.local. (
+                2023012301 ; serial
+                8h         ; refresh
+                2h         ; retry
+                4w         ; expire
+                1h         ; minimum
+              )
+@       IN NS   Servidor1.local.
+
+; Define host mappings
+Portatil1   IN A    10.1.1.1
+Portatil2   IN A    10.1.1.2
+PC1         IN A    10.2.2.1
+PC2         IN A    10.2.2.2
+Roma        IN A    10.3.3.1
+Paris       IN A    10.3.3.2
+Servidor1   IN A    10.4.4.1
+Servidor2   IN A    10.4.4.2

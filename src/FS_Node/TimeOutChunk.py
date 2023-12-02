@@ -1,7 +1,7 @@
 import threading
 import socket
 
-from src.protocols.UDPombo.UDPombo import UDPombo
+from src.protocols.UDPombo import UDPombo
 from src.protocols.utils import UDP_PORT, TIMEOUT_TIME, TIMEOUT_LIMIT
 
 class TimeOutChunk(threading.Thread):

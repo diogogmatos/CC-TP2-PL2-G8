@@ -1,6 +1,6 @@
 import socket
 
-from src.protocols.TCPombo.types import PomboFiles, PomboLocations, PomboUpdate
+from src.protocols.types import PomboFiles, PomboLocations, PomboUpdate
 
 BUFFER_SIZE = 1024
 

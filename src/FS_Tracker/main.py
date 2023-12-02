@@ -4,12 +4,12 @@ import sys  # to exit gracefully
 import threading  # to handle multiple connections
 from typing import Dict  # to use typing for dictionaries
 
+# dns functions
+import src.dns as dns
 # TCPombo protocol payload type
-from src.protocols.TCPombo.types import PomboLocations, PomboFiles, PomboUpdate
-
+from src.protocols.types import PomboLocations, PomboFiles
 # import TCPombo protocol
-from src.protocols.TCPombo.TCPombo import TCPombo
-
+from src.protocols.TCPombo import TCPombo
 # import TCP_PORT
 from src.protocols.utils import TCP_PORT
 
@@ -132,7 +132,7 @@ def handleDisconnect(node: str, availableFiles: Flock, lock: threading.Lock):
 
 # handle a connection with a node
 def handleNode(conn: socket.socket, ip: str, availableFiles: Flock, fileHashes: HashFlock, lock: threading.Lock):
-    hostname = socket.gethostbyaddr(ip)[0]
+    hostname = dns.getHostByAddr(ip)
     
     # connection established print
     print("\nTCPombo Connection with", hostname, "@", ip)
