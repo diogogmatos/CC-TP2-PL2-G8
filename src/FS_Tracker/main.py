@@ -109,7 +109,7 @@ def handleCall(conn, availableFiles: Flock, fileHashes: HashFlock, data: bytes, 
             for node, files in availableFiles.items():
                 for f_name, f_blocks in files.items():
                     if (f_name == requestedFile):
-                        MESSAGE[0].append((node[0], f_blocks))
+                        MESSAGE[0].append((node, f_blocks))
 
         # get the block hashes
         for h in fileHashes[requestedFile]:
