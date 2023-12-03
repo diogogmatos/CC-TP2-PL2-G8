@@ -2,9 +2,9 @@
 # ex: ("file1", 32)
 PomboUpdate = tuple[str, int]
 
-# lista de tuplos (nome do ficheiro, blocos) onde blocos = (id, hash)
-# ex: [("file1", {(1, 1324123), (2, 1241234), (3, 4125342)}), ("file2", (...))]
-PomboFiles = list[tuple[str, set[tuple[int, bytes]]]]
+# lista de tuplos (nome do ficheiro, blocos) onde blocos = (nr total de chunks, lista de hashes)
+# ex: [ ( "file1", ( 4, [hash1, hash2, hash3, hash4] ) ) ]
+PomboFiles = list[tuple[str, tuple[int, list[bytes]]]]
 
 # tuplo com duas listas, uma com os nodes e os blocos que têm do ficheiro pedido,
 # e outra com as hash's dos blocos do ficheiro pedido

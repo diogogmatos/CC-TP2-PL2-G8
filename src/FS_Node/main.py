@@ -20,6 +20,8 @@ from src.protocols.utils import TCP_PORT, UDP_PORT, CHUNK_SIZE, chunkify
 from src.FS_Node.ChunksToReceive import ChunksToReceive
 # data structure to store chunks to process
 from src.FS_Node.ChunksToProcess import ChunksToProcess
+# data structure to store transfer efficiency data
+from src.FS_Node.TransferEfficiency import TransferEfficiency
 
 
 # TRACKER RELATED
@@ -107,7 +109,7 @@ def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToRe
 
 
 # efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str):
+def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str, transferEfficiency: TransferEfficiency):
     # criar socket udp
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
@@ -116,7 +118,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: st
     dest_ip = socket.gethostbyname(node_name)
 
     # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
-    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s)
+    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s, transferEfficiency)
 
     # enviar call a pedir chunks
     addr = (dest_ip, UDP_PORT)
@@ -140,7 +142,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: st
 
 
 # calcular divisão de chunks por nodes
-def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]:
+def calculateDivisionOfChunks(locations: PomboLocations, transferEfficiency: TransferEfficiency) -> Dict[str, list[int]]:
     divisionOfChunks: Dict[str, list[int]] = {node: [] for node, _ in locations[0]}
 
     # calcular nº total de chunks
@@ -174,7 +176,7 @@ def calculateDivisionOfChunks(locations: PomboLocations) -> Dict[str, list[int]]
 
 
 # efetuar uma transferência
-def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str):
+def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str, transferEfficiency: TransferEfficiency):
     # criar o ficheiro
     with open(folder + "/" + file, 'wb') as f:
         f.write(b'\0')
@@ -182,14 +184,14 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
         f.close()
 
     # calcular divisão de chunks por nodes
-    divisionOfChunks = calculateDivisionOfChunks(locations)
+    divisionOfChunks = calculateDivisionOfChunks(locations, transferEfficiency)
 
     # criar threads para efetuar o pedido de chunks a cada node
     threads = list()
     for node, chunksToTransfer in divisionOfChunks.items():
         if chunksToTransfer != []:
             t = threading.Thread(target=handleChunkTransfer,
-                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder))
+                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder, transferEfficiency))
             t.start()
             threads.append(t)
 
@@ -325,6 +327,9 @@ def main():
 
     # send message to tracker (inform about initial files in folder)
     tcp_socket.send(TCPombo.createFilesChirp(pombo))
+
+    # create transfer efficiency data structure
+    transferEfficiency = TransferEfficiency()
 
     # handle server
     t = threading.Thread(target=handleServer, args=(folder,))

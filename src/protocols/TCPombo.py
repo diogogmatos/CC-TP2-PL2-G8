@@ -33,42 +33,34 @@ class TCPombo:
 
     # handle bytes
 
-    # PomboFiles: [('f1', {(0, b'hash1'), (1, b'hash2')}), ('f2', {(2, b'hash3'), (3, b'hash4')})]
-    # bytes: f1\00hash11hash2\nf2\02hash33hash4
-
-    # converter payload de PomboFiles para bytes
+    # PomboFiles: [ ( "file1", ( 4, [hash1, hash2, hash3, hash4] ) ), ( "file2", ( 2, [hash1, hash2] ) ) ]
+    # bytes: file1\04hash11hash2hash3hash4file2\02hash1hash2
     @staticmethod
     def __toBytesFiles(data: PomboFiles):
         # criar bytearray para guardar dados
         b_array: bytearray = bytearray()
 
         # adicionar ficheiros e seus blocos e hash's
-        i = 0
-        file_nr = len(data)
-
         for f in data:
 
             # adicionar nome do ficheiro e \0 para separar nome de blocos
             b_array.extend((f[0] + "\0").encode())
 
-            # adicionar blocos
-            for (b_id, b_hash) in f[1]:
-                b_array.extend(b_id.to_bytes(4, byteorder="big"))
-                b_array.extend(b_hash)
+            # adicionar nr de blocos
+            b_array.extend(f[1][0].to_bytes(4, byteorder="big"))
 
-            i += 1
-            if i < file_nr:
-                # adicionar \n para separar ficheiros
-                b_array.extend("\n".encode())
+            # adicionar hash's dos blocos
+            for b_hash in f[1][1]:
+                b_array.extend(b_hash)
 
         # converter bytearray para bytes
         b = bytes(b_array)
 
         return b
 
+    
     # PomboLocations: ([("node1", {1, 2, 3}), ("node2", {2, 3, 4})], [hash1, hash2, hash3, hash4])
     # bytes: node1\0123\nnode2\0234\thash1hash2hash3hash4
-
     @staticmethod
     def __toBytesLocations(data: PomboLocations):
         # criar bytearray para guardar dados
@@ -119,8 +111,9 @@ class TCPombo:
         b = bytes(b_array)
 
         return b
-
-    # converter payload de bytes para Pombo
+    
+    # PomboFiles: [ ( "file1", ( 4, [hash1, hash2, hash3, hash4] ) ), ( "file2", ( 2, [hash1, hash2] ) ) ]
+    # bytes: file1\04hash11hash2hash3hash4file2\02hash1hash2
     @staticmethod
     def __fromBytesFiles(data: bytes) -> PomboFiles:
         # criar Pombo
@@ -137,28 +130,24 @@ class TCPombo:
                 b_array = b_array[1:]
                 b = b_array[0:1].decode()
 
-            # blocos
-            f_blocks: set[tuple[int, bytes]] = set()
+            # nr blocos
             b_array = b_array[1:]
-            while len(b_array) > 0 and b_array[0:1].decode() != "\n":
-                # nr do bloco
-                block_nr = int.from_bytes(b_array[0:4], byteorder="big")
-                # hash do bloco
-                block_hash = bytes(b_array[4:24])
-                # adicionar bloco
-                f_blocks.add((block_nr, block_hash))
-                # avançar array
-                b_array = b_array[24:]
+            nr_blocks = int.from_bytes(b_array[0:4], byteorder="big")
+
+            # hash's dos blocos
+            b_array = b_array[4:]
+            hashes: list[bytes] = list()
+            for i in range(nr_blocks):
+                hashes.append(bytes(b_array[0:20]))
+                b_array = b_array[20:]
 
             # adicionar ficheiro e seus blocos
-            p.append((f_name, f_blocks))
-
-            # avançar array (para passar o \n)
-            if len(b_array) > 0:
-                b_array = b_array[1:]
+            p.append((f_name, (nr_blocks, hashes)))
 
         return p
 
+    # PomboLocations: ([("node1", {1, 2, 3}), ("node2", {2, 3, 4})], [hash1, hash2, hash3, hash4])
+    # bytes: node1\0123\nnode2\0234\thash1hash2hash3hash4
     @staticmethod
     def __fromBytesLocations(data: bytes) -> PomboLocations:
         # criar Pombo
@@ -237,15 +226,15 @@ class TCPombo:
     @staticmethod
     def __createTCPombo(chirp: bool, update: bool, data: bytes):
         # calculate length
-        # length + chirp + update? + payload
-        l = 4 + 1 + (1 if update else 0) + len(data)
+        # length + chirp + update + payload
+        l = 4 + 1 + 1 + len(data)
 
         # create TCPombo
         tcpombo = bytearray()
         tcpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         tcpombo.append(chirp)  # chirp
-        tcpombo.append(update) if update else None  # update?
-        tcpombo.extend(data)  # data
+        tcpombo.append(update) # update
+        tcpombo.extend(data)  # payload
 
         return tcpombo
 
@@ -277,31 +266,30 @@ class TCPombo:
 
     @staticmethod
     def isUpdate(tcpombo: bytes):
-        # its an update if its a chirp and the update flag is set
-        return bool(bytearray(tcpombo)[4]) and bool(bytearray(tcpombo)[5])
+        return bool(bytearray(tcpombo)[5])
 
     @staticmethod
-    def getOverheadLen(tcpombo: bytes):
-        # length + chirp + update?
-        return 4 + 1 + (1 if TCPombo.isUpdate(tcpombo) else 0)
+    def __getOverheadLen():
+        # length + chirp + update
+        return 4 + 1 + 1
 
     # gets do payload
 
     @staticmethod
     def getPomboCall(tcpombo: bytes) -> str:
-        return bytearray(tcpombo)[TCPombo.getOverheadLen(tcpombo):].decode()
+        return bytearray(tcpombo)[TCPombo.__getOverheadLen():].decode()
 
     @staticmethod
     def getPomboUpdate(tcpombo: bytes) -> PomboUpdate:
-        return TCPombo.__fromBytesUpdate(bytearray(tcpombo)[TCPombo.getOverheadLen(tcpombo):])
+        return TCPombo.__fromBytesUpdate(bytearray(tcpombo)[TCPombo.__getOverheadLen():])
 
     @staticmethod
     def getPomboFiles(tcpombo: bytes) -> PomboFiles:
-        return TCPombo.__fromBytesFiles(bytearray(tcpombo)[TCPombo.getOverheadLen(tcpombo):])
+        return TCPombo.__fromBytesFiles(bytearray(tcpombo)[TCPombo.__getOverheadLen():])
 
     @staticmethod
     def getPomboLocations(tcpombo: bytes) -> PomboLocations:
-        return TCPombo.__fromBytesLocations(bytearray(tcpombo)[TCPombo.getOverheadLen(tcpombo):])
+        return TCPombo.__fromBytesLocations(bytearray(tcpombo)[TCPombo.__getOverheadLen():])
 
     # toString
 
@@ -311,6 +299,15 @@ class TCPombo:
     #     for b in l:
     #         r.append(b.hex())
     #     return r
+
+    @staticmethod
+    def __reducePomboFiles(pombo: PomboFiles) -> list[tuple[str, set[int]]]:
+        l: list[tuple[str, int]] = list()
+
+        for f in pombo:
+            l.append((f[0], f[1][0]))
+
+        return l
 
     # TCPombo
     @staticmethod
@@ -331,7 +328,7 @@ class TCPombo:
                 r += " The file you asked for is here:\n" + str(TCPombo.getPomboLocations(tcpombo)[0]) + "."
             else:
                 r += " I have the following files:\n" + \
-                    str(TCPombo.getPomboFiles(tcpombo)) + "."
+                    str(TCPombo.__reducePomboFiles(TCPombo.getPomboFiles(tcpombo))) + "."
 
         else:
 

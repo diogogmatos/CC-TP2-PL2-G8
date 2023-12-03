@@ -14,14 +14,14 @@ TIMEOUT_TIME = 1.5
 TIMEOUT_LIMIT = 10
 
 # divide ficheiro em chunks e calcula as hashes respetivas
-def chunkify(path: str) -> set[tuple[int, bytes]]:
-        # criar estrutura para guardar informação dos blocos
-        chunks: set[tuple[int, bytes]] = set()
-        
+def chunkify(path: str) -> tuple[int, list[bytes]]:        
         # obter número de blocos
         file_size = os.path.getsize(path)
         l = math.ceil(file_size / CHUNK_SIZE)
 
+        # obter hashes dos blocos
+        hashes = list()
+        
         # abrir o ficheiro
         with open(path, "rb") as f:
 
@@ -32,11 +32,11 @@ def chunkify(path: str) -> set[tuple[int, bytes]]:
                 f.seek(i * CHUNK_SIZE)
                 chunk_data = f.read(CHUNK_SIZE)
 
-                # adicionar informação (nr, hash)
-                chunks.add((i, hashlib.sha1(chunk_data).digest()))
+                # adicionar hash do chunk à lista de hashes
+                hashes.append(hashlib.sha1(chunk_data).digest())
                 i += 1
 
             # fechar o ficheiro
             f.close()
         
-        return chunks
+        return (l, hashes)

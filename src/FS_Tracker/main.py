@@ -17,7 +17,7 @@ from src.protocols.utils import TCP_PORT
 BUFFER_SIZE = 1024
 
 # type for the dictionary that stores the available files for each node
-Flock = Dict[tuple[str, int], Dict[str, set[int]]]
+Flock = Dict[str, Dict[str, set[int]]]
 HashFlock = Dict[str, list[bytes]]
 
 
@@ -81,17 +81,13 @@ def handleChirp(node: str, availableFiles: Flock, fileHashes: HashFlock, data: b
             availableFiles[node] = dict()
             pomboFiles = TCPombo.getPomboFiles(data)
 
-            for f in pomboFiles:
-
+            for p in pomboFiles:
                 blocks: set[int] = set()
-                fileHashes[f[0]] = [b''] * len(f[1])
+                for i in range(p[1][0]):
+                    blocks.add(i)
 
-                for (block_nr, block_hash) in f[1]:
-
-                    blocks.add(block_nr)
-                    fileHashes[f[0]][block_nr] = block_hash
-
-                availableFiles[node][f[0]] = blocks
+                availableFiles[node][p[0]] = blocks
+                fileHashes[p[0]] = p[1][1]
 
 
 # handle a call message
