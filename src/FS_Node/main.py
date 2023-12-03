@@ -203,7 +203,7 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
 
 
 # efetuar o comando "get"
-def handleGet(s: socket.socket, file: str, folder: str):
+def handleGet(s: socket.socket, file: str, folder: str, transferEfficiency: TransferEfficiency):
     # check if the file already exists
     if os.path.isfile(folder + "/" + file):
         print("\nFile already exists.")
@@ -228,7 +228,7 @@ def handleGet(s: socket.socket, file: str, folder: str):
         print("\nGet:", TCPombo.toString(data, True))
 
         # handle file transfer
-        handleTransfer(s, file, locations, folder)
+        handleTransfer(s, file, locations, folder, transferEfficiency)
 
 
 # SERVIDOR UDP
@@ -352,7 +352,7 @@ def main():
 
         elif parameters[0] == "get":
             file = parameters[1]
-            handleGet(tcp_socket, file, folder)
+            handleGet(tcp_socket, file, folder, transferEfficiency)
         
         else:
             print(fail_msg)
