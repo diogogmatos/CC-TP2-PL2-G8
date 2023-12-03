@@ -78,6 +78,7 @@ def handleChirp(node: str, availableFiles: Flock, fileHashes: HashFlock, data: b
     else:
 
         with lock:
+            print("availableFiles hostname:", node)
             availableFiles[node] = dict()
             pomboFiles = TCPombo.getPomboFiles(data)
 
@@ -88,6 +89,8 @@ def handleChirp(node: str, availableFiles: Flock, fileHashes: HashFlock, data: b
 
                 availableFiles[node][p[0]] = blocks
                 fileHashes[p[0]] = p[1][1]
+
+        print("availableFiles:", availableFiles)
 
 
 # handle a call message
@@ -103,8 +106,8 @@ def handleCall(conn, availableFiles: Flock, fileHashes: HashFlock, data: bytes, 
 
         with lock:
             # get the locations of the requested file
-            for node in availableFiles:
-                for f_name, f_blocks in availableFiles[node].items():
+            for node, files in availableFiles.items():
+                for f_name, f_blocks in files.items():
                     if (f_name == requestedFile):
                         MESSAGE[0].append((node[0], f_blocks))
 
