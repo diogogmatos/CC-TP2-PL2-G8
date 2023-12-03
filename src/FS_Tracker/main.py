@@ -117,7 +117,8 @@ def handleCall(conn, availableFiles: Flock, fileHashes: HashFlock, data: bytes, 
 
     # send message
     conn.send(TCPombo.createLocationsChirp(MESSAGE))
-
+    print("- sent locations to", conn.getpeername()[0])
+    
 
 # handle a node being disconnected: remove it from availableFiles
 def handleDisconnect(node: str, availableFiles: Flock, lock: threading.Lock):
