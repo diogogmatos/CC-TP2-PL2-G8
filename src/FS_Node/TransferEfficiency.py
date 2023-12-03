@@ -13,6 +13,11 @@ class TransferEfficiency:
                 self.dict[node] = (0, 0, 0)
             self.dict[node] = (self.dict[node][0] + 1, self.dict[node][1] + time, self.dict[node][2])
 
+    def newNode(self, node:str):
+        with self.lock:
+            if node not in self.dict:
+                self.dict[node] = (0, 0, 0)
+
     def addLostTransfer(self, node: str):
         with self.lock:
             if node not in self.dict:
@@ -22,8 +27,9 @@ class TransferEfficiency:
     # devolve o RTT médio de um nó
     def getAverageTransferTime(self, node: str):
         with self.lock:
-            if node not in self.dict:
-                self.dict[node] = (0, 0, 0)
+            # Acho que isto não é preciso, pior das hipóteses volta a colocar
+            # if node not in self.dict:
+            #     self.dict[node] = (0, 0, 0)
             if self.dict[node][0] == 0:
                 return 0
             return self.dict[node][1] / self.dict[node][0]
