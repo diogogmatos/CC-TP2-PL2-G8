@@ -3,6 +3,7 @@ import socket  # to send via tcp
 import os  # to get files in folder
 import threading
 import hashlib  # para calcular o hash dos blocos
+import time
 
 # dns functions
 import src.dns as dns
@@ -84,7 +85,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
             if calculated_hash == info[0]:
 
                 # remover chunk da fila de chunks a receber e parar o seu timeout
-                chunksToReceive.removeChunk(data[0])
+                chunksToReceive.removeChunk(data[0], int(round(time.time() * 1000)) - UDPombo.getTimestamp(udpombo))
 
                 # escrever chunk para ficheiro
                 with open(folder + "/" + file_name, 'r+b') as f:
