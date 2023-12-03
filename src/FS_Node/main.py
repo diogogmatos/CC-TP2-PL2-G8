@@ -143,8 +143,11 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: st
 
 
 # calcular divisão de chunks por nodes
-def calculateDivisionOfChunks(locations: PomboLocations, transferEfficiency: TransferEfficiency) -> Dict[str, list[int]]:
+def calculateDivisionOfChunks(tcp_socket, file, node, chunksToTransfer, folder, locations: PomboLocations, transferEfficiency: TransferEfficiency) -> Dict[str, list[int]]:
     divisionOfChunks: Dict[str, list[int]] = {node: [] for node, _ in locations[0]}
+
+    for node in locations[0]:
+        transferEfficiency.newNode(node)
 
     # calcular nº total de chunks
     totalChunks = chunkNr(locations)
@@ -158,8 +161,53 @@ def calculateDivisionOfChunks(locations: PomboLocations, transferEfficiency: Tra
         return divisionOfChunks
 
     # caso contrário
-    assigned_numbers = set()
+    # assigned_numbers = set()
 
+    
+    for i in range(totalChunks):
+        usable: set[str] = [] 
+        threads = list()
+        for node, node_set in locations[0]:
+            if node not in divisionOfChunks:
+                divisionOfChunks[node] = []
+            if transferEfficiency.getAverageTransferTime(node) == 0:
+                chunksToTransfer = list()
+                chunksToTransfer.append(i)
+                t = threading.Thread(target=handleChunkTransfer,
+                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder, transferEfficiency))
+                t.start()
+                threads.append(t)
+                for t in threads:
+                    t.join()
+                usable = []
+                break
+            if i in node_set:
+                usable.add(node)
+
+        if len(usable) == 0:
+            continue
+        elif len(usable) == 1:
+            divisionOfChunks[usable[0]].append(i)
+            continue
+
+        better= usable[0]
+        for n in range(usable)-1:
+            tranferAverageA = transferEfficiency.getAverageTransferTime(better)
+            tranferAverageB = transferEfficiency.getAverageTransferTime(usable[n+1])
+            tranferRTTA = transferEfficiency.getSuccessRate(better)
+            tranferRTTB = transferEfficiency.getSuccessRate(usable[n+1])
+            value = tranferAverageA* tranferRTTA / tranferAverageB* tranferRTTB
+            if value < 1 and len(divisionOfChunks[better]) > len(divisionOfChunks[usable[n+1]]):
+                better = usable[n+1]
+            elif value > 1 and len(divisionOfChunks[better]) < len(divisionOfChunks[usable[n+1]]):
+                better = better
+            elif abs((len(divisionOfChunks[better])+1)/(len(divisionOfChunks[usable[n+1]])) - value) < abs((len(divisionOfChunks[better]))/(len(divisionOfChunks[usable[n+1]])+1) - value):
+                better = better
+            else:
+                better = usable[n+1]
+        divisionOfChunks[better].append(i)
+    
+    '''
     for _ in range(totalChunks):
         for node, node_set in locations[0]:
             if node not in divisionOfChunks:
@@ -172,6 +220,7 @@ def calculateDivisionOfChunks(locations: PomboLocations, transferEfficiency: Tra
                 divisionOfChunks[node].append(number)
                 assigned_numbers.add(number)
                 break
+    '''
     
     return divisionOfChunks
 
