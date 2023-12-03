@@ -85,7 +85,7 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
             if calculated_hash == info[0]:
 
                 # remover chunk da fila de chunks a receber e parar o seu timeout
-                chunksToReceive.removeChunk(data[0], int(round(time.time() * 1000)) - UDPombo.getTimestamp(udpombo))
+                chunksToReceive.removeChunk(data[0], round(time.time() * 1000) - UDPombo.getTimestamp(udpombo))
 
                 # escrever chunk para ficheiro
                 with open(folder + "/" + file_name, 'r+b') as f:
@@ -123,10 +123,9 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: st
 
     # enviar call a pedir chunks
     addr = (dest_ip, UDP_PORT)
-    print("addr in handlechunktransfer", addr)
     s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
 
-    print("- sent call for chunks:", dest_ip)
+    print("- sent call for chunks:", node_name, "@", dest_ip)
 
     chunksToProcess = ChunksToProcess()
 
@@ -186,7 +185,9 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
         f.close()
 
     # calcular divisão de chunks por nodes
+    print("- calculating division of chunks...", end = "")
     divisionOfChunks = calculateDivisionOfChunks(locations, transferEfficiency)
+    print(" done!")
 
     # criar threads para efetuar o pedido de chunks a cada node
     threads = list()
@@ -257,7 +258,7 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
             # criar mensagem de resposta
             udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
 
-            print("- sent chunk", chunk_nr, addr)
+            print("- sent chunk", chunk_nr)
 
 
 # servidor UDP: recebe calls e responde com chirps
@@ -354,6 +355,9 @@ def main():
         elif parameters[0] == "get":
             file = parameters[1]
             handleGet(tcp_socket, file, folder, transferEfficiency)
+
+        elif parameters[0] == "stats":
+            print(transferEfficiency)
         
         else:
             print(fail_msg)

@@ -69,8 +69,7 @@ class UDPombo:
         udpombo = bytearray()
         udpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         udpombo.append(chirp)  # chirp
-        udpombo.extend(int(round(time.time() * 1000)
-                           ).to_bytes(8, byteorder="big"))  # timestamp (long)
+        udpombo.extend(round(time.time() * 1000).to_bytes(8, byteorder="big"))  # timestamp (long)
         udpombo.extend((file + "\0").encode())  # file name + \0
         udpombo.extend(data)
 
