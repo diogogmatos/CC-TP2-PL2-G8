@@ -119,7 +119,7 @@ def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: st
     dest_ip = dns.getHostByName(node_name)
 
     # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
-    chunksToReceive = ChunksToReceive(file_name, chunksToTransfer, hashes, dest_ip, s, transferEfficiency)
+    chunksToReceive = ChunksToReceive(node_name, file_name, chunksToTransfer, hashes, dest_ip, s, transferEfficiency)
 
     # enviar call a pedir chunks
     addr = (dest_ip, UDP_PORT)
