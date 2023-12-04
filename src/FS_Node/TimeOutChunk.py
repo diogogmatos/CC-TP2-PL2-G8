@@ -27,7 +27,6 @@ class TimeOutChunk(threading.Thread):
     def timeout_handler(self):
         print("- timeout on chunk", self.chunk_nr)
         self.limit -= 1 # decremento do limite de timeouts
-        # self.time *= 2 # aumento exponencial do timeout
         self.transferEfficiency.addLostTransfer(self.node_name) # incremento do número de timeouts
         self.send_chunk() # reenvio do chunk
         self.run() # reinício do timeout

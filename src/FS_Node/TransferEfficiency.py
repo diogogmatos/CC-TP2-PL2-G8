@@ -35,7 +35,7 @@ class TransferEfficiency:
             return self.dict[node][1] / self.dict[node][0]
         
     # devolve o ratio de transferências bem sucedidas (0-1) de um nó
-    def getSucceededRatio(self, node: str):
+    def getSuccessRate(self, node: str):
         with self.lock:
             if node not in self.dict:
                 self.dict[node] = (0, 0, 0)
@@ -48,7 +48,7 @@ class TransferEfficiency:
         for node in self.dict:
             s += f"{node}:\n"
             s += f"\tAverage transfer time (ms): {self.getAverageTransferTime(node)}\n"
-            s += f"\tSucceeded ratio (%): {self.getSucceededRatio(node) * 100}\n"
+            s += f"\tSucceeded ratio (%): {self.getSuccessRate(node) * 100}\n"
             s += f"\tTotal transfers: {self.dict[node][0]}\n"
             s += f"\tTotal transfer time (ms): {self.dict[node][1]}\n"
             s += f"\tTotal lost transfers: {self.dict[node][2]}\n"

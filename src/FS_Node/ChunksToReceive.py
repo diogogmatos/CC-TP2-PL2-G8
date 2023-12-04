@@ -22,14 +22,12 @@ class ChunksToReceive:
         with self.lock:
             return self.dictionary.get(chunk_nr)
 
-    def removeChunk(self, chunk_nr: int, time: int):
+    def removeChunk(self, chunk_nr: int):
         with self.lock:
             # interromper o timeout
             self.dictionary[chunk_nr][1].interrupt()
             # remover o chunk do dicionário
             del self.dictionary[chunk_nr]
-            # adicionar o tempo de transferência ao transferEfficiency
-            self.transferEfficiency.addTransfer(self.node_name, time)
 
     def isEmpty(self):
         with self.lock:
