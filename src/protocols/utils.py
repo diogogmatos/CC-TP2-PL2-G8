@@ -9,7 +9,7 @@ TCP_PORT = 9090
 # set udp server port
 UDP_PORT = 9090
 # set timeout time
-TIMEOUT_TIME = 1.5
+TIMEOUT_TIME = 2
 # set timeout limit
 TIMEOUT_LIMIT = 10
 

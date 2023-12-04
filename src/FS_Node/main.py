@@ -198,28 +198,30 @@ def calculateDivisionOfChunks(tcp_socket, file, folder, locations: PomboLocation
             tranferRTTB = transferEfficiency.getSuccessRate(usable[n+1])
             mediaA = tranferAverageA * tranferRTTA
             mediaB =  tranferAverageB * tranferRTTB
+            lenA = len(divisionOfChunks[better])
+            lenB = len(divisionOfChunks[usable[n+1]])
             if mediaA < mediaB:
                 value = mediaB / mediaA
             else:
                 value = mediaA / mediaB
-            if len(divisionOfChunks[better]) == 0:
+            if lenA == 0:
                 better = better
-            elif len(divisionOfChunks[usable[n+1]]) == 0:
+            elif lenB == 0:
                 better = usable[n+1]
-            elif mediaA < mediaB and len(divisionOfChunks[better]) < len(divisionOfChunks[usable[n+1]]):
+            elif mediaA < mediaB and lenA < lenB:
                 better = better
-            elif mediaA > mediaB and len(divisionOfChunks[better]) > len(divisionOfChunks[usable[n+1]]):
+            elif mediaA > mediaB and lenA > lenB:
                 better = usable[n+1]
             elif mediaA < mediaB:
-                if abs((len(divisionOfChunks[better])+1) / (len(divisionOfChunks[usable[n+1]])) - value) > abs((len(divisionOfChunks[better])) / (len(divisionOfChunks[usable[n+1]])+1) - value):
+                if abs((lenA+1) / (lenB) - value) < abs((lenA) / (lenB+1) - value):
                     better = better
                 else:
                     better = usable[n+1]
             else:
-                if abs((len(divisionOfChunks[usable[n+1]])+1) / (len(divisionOfChunks[better])) - value) > abs((len(divisionOfChunks[usable[n+1]])) / (len(divisionOfChunks[better])+1) - value):
-                    better = better
-                else:
+                if abs((lenB+1) / (lenA) - value) < abs((lenB) / (len(divisionOfChunks[better])+1) - value):
                     better = usable[n+1]
+                else:
+                    better = better
         divisionOfChunks[better].append(i)
     
     '''
@@ -252,6 +254,7 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
     print("- calculating division of chunks...", end = "")
     divisionOfChunks = calculateDivisionOfChunks(tcp_socket, file, folder, locations, transferEfficiency)
     print(" done!")
+    
 
     # criar threads para efetuar o pedido de chunks a cada node
     threads = list()
@@ -266,7 +269,7 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
         t.join()
 
     print("- transfer succeeded:", file)
-
+    print("Division of Chunks: ",divisionOfChunks)
 
 # efetuar o comando "get"
 def handleGet(s: socket.socket, file: str, folder: str, transferEfficiency: TransferEfficiency):
