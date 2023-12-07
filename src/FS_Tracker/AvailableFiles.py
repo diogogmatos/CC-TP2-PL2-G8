@@ -30,7 +30,9 @@ class AvailableFiles:
                 for i in range(p[1][0]):
                     blocks.add(i)
 
-                self.availableFiles[p[0]] = dict()
+                if p[0] not in self.availableFiles:
+                    self.availableFiles[p[0]] = dict()
+
                 self.availableFiles[p[0]][node] = blocks
                 self.fileHashes[p[0]] = p[1][1]
 
