@@ -16,6 +16,8 @@ class AvailableFiles:
         with self.lock:
             if file not in self.availableFiles:
                 self.availableFiles[file] = dict()
+            
+            if node not in self.availableFiles[file]:
                 self.availableFiles[file][node] = set()
 
             self.availableFiles[file][node].add(block)
