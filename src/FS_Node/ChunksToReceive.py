@@ -7,14 +7,16 @@ from typing import Dict
 
 from src.FS_Node.TransferEfficiency import TransferEfficiency
 
+from src.protocols.utils import getNodeFromChunk
+
 class ChunksToReceive:
-    def __init__(self, node_name: str, file: str, chunks: list[int], hashes: list[bytes], ip: str, udp_socket: socket.socket, transferEfficiency: TransferEfficiency):
+    def __init__(self, node_name: str, file_name: str, chunks: list[int], hashes: list[bytes], ip: str, udp_socket: socket.socket, transferEfficiency: TransferEfficiency, divisionOfChunks: Dict[str, list[int]]):
         self.lock = threading.Lock()
         self.dictionary: Dict[int, tuple[bytes, TimeOutChunk]] = {}
         self.transferEfficiency = transferEfficiency
         self.node_name = node_name
         for c in chunks:
-            timeout = TimeOutChunk(node_name, c, file, ip, udp_socket, transferEfficiency)
+            timeout = TimeOutChunk(getNodeFromChunk(c, divisionOfChunks), c, file_name, ip, udp_socket, transferEfficiency)
             self.dictionary[c] = (hashes[c], timeout)
             timeout.start()
 

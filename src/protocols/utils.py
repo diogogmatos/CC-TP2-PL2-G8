@@ -2,6 +2,8 @@ import hashlib  # para calcular o hash dos blocos
 import math
 import os
 
+from typing import Dict
+
 # tamanho dos chunks em bytes
 CHUNK_SIZE = 2048
 # set tracker port
@@ -12,6 +14,13 @@ UDP_PORT = 9090
 TIMEOUT_TIME = 2
 # set timeout limit
 TIMEOUT_LIMIT = 10
+
+# retorna o nó que pediu o node
+def getNodeFromChunk(chunk: int, divisonOfChunks: Dict[str, list[int]]):
+    for node, chunks in divisonOfChunks.items():
+        if chunk in chunks:
+            return node
+
 
 # divide ficheiro em chunks e calcula as hashes respetivas
 def chunkify(path: str) -> tuple[int, list[bytes]]:        

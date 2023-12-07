@@ -16,7 +16,7 @@ from src.protocols.TCPombo import TCPombo
 # UDPombo protocol
 from src.protocols.UDPombo import UDPombo
 # constants and utility functions
-from src.protocols.utils import TCP_PORT, UDP_PORT, CHUNK_SIZE, chunkify
+from src.protocols.utils import TCP_PORT, UDP_PORT, CHUNK_SIZE, chunkify, getNodeFromChunk
 # data structure to store chunks to receive
 from src.FS_Node.ChunksToReceive import ChunksToReceive
 # data structure to store chunks to process
@@ -102,83 +102,64 @@ def processReceivedChunk(chunksToProcess: ChunksToProcess, chunksToReceive: Chun
                 print("- transfer succeeded:", data[0])
 
 
-def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: int, node_name: str, transferEfficiency: TransferEfficiency):
+def receiveChunks(s: socket.socket, chunksToProcess: ChunksToProcess, chunksToReceive: int, transferEfficiency: TransferEfficiency, divisionOfChunks: Dict[str, list[int]]):
     while chunksToReceive > 0:
         udpombo, _ = s.recvfrom(20000)
-        transferEfficiency.addTransfer(node_name, round(time.time() * 1000) - UDPombo.getTimestamp(udpombo))
+        transferEfficiency.addTransfer(getNodeFromChunk(UDPombo.getChirpData(udpombo)[0], divisionOfChunks), round(time.time() * 1000) - UDPombo.getTimestamp(udpombo))
         chunksToProcess.addChunk(udpombo)
         chunksToReceive -= 1
 
 
-# efetuar a tansferência de chunks de um node específico
-def handleChunkTransfer(tcp_socket: socket.socket, file_name: str, node_name: str, chunksToTransfer: list[int], hashes: list[bytes], folder: str, transferEfficiency: TransferEfficiency):
-    # criar socket udp
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('', 0))
-
+def transferSingleChunk(s: socket.socket, tcp_socket: socket.socket, node_name: str, folder: str, file_name: str, chunk: int, hashes: list[bytes], transferEfficiency: TransferEfficiency):
     # obter ip do node
     dest_ip = dns.getHostByName(node_name)
 
-    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
-    chunksToReceive = ChunksToReceive(node_name, file_name, chunksToTransfer, hashes, dest_ip, s, transferEfficiency)
-
     # enviar call a pedir chunks
     addr = (dest_ip, UDP_PORT)
-    s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
+    s.sendto(UDPombo.createCall([chunk], file_name), addr)
 
-    print("- sent call for chunks:", node_name, "@", dest_ip)
+    print("- sent call for chunk:", node_name, "@", dest_ip)
 
+    # inicializar estrutura de dados para chunks a processar
     chunksToProcess = ChunksToProcess()
 
-    r = threading.Thread(target=receiveChunks, args=(s, chunksToProcess, len(chunksToTransfer), node_name, transferEfficiency))
-    r.start()
+    # receber chunk
+    receiveChunks(s, chunksToProcess, 1, transferEfficiency, {node_name: [chunk]})
 
-    p = threading.Thread(target=processReceivedChunk, args=(chunksToProcess, chunksToReceive, folder, file_name, tcp_socket))
-    p.start()
+    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
+    chunksToReceive = ChunksToReceive(node_name, file_name, [chunk], hashes, dest_ip, s, transferEfficiency, {node_name: [chunk]})
 
-    r.join()
-    p.join()
+    # processar chunk
+    processReceivedChunk(chunksToProcess, chunksToReceive, folder, file_name, tcp_socket)
 
+    # cleanup
     chunksToReceive.destroy()
-    s.close()
 
 
 # calcular divisão de chunks por nodes
-def calculateDivisionOfChunks(tcp_socket, file, folder, locations: PomboLocations, transferEfficiency: TransferEfficiency) -> Dict[str, list[int]]:
+def calculateDivisionOfChunks(udp_socket: socket.socket, tcp_socket: socket.socket, file: str, folder: str, locations: PomboLocations, transferEfficiency: TransferEfficiency, total_chunks: int) -> tuple[Dict[str, list[int]], int]:
     divisionOfChunks: Dict[str, list[int]] = {node: [] for node, _ in locations[0]}
+    received_chunks_nr = 0
 
     for node, _ in locations[0]:
         transferEfficiency.newNode(node)
-
-    # calcular nº total de chunks
-    totalChunks = chunkNr(locations)
 
     # se só um node tiver o ficheiro
     if len(locations[0]) == 1:
 
         for node, _ in locations[0]:
-            divisionOfChunks[node] = list(range(totalChunks))
+            divisionOfChunks[node] = list(range(total_chunks))
         
         return divisionOfChunks
-
-    # caso contrário
-    # assigned_numbers = set()
     
-    for i in range(totalChunks):
-        usable: set[str] = [] 
-        threads = list()
+    for i in range(total_chunks):
+        usable: set[str] = []
         for node, node_set in locations[0]:
             if node not in divisionOfChunks:
                 divisionOfChunks[node] = []
             if transferEfficiency.getAverageTransferTime(node) == 0:
-                chunksToTransfer = list()
-                chunksToTransfer.append(i)
-                t = threading.Thread(target=handleChunkTransfer,
-                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder, transferEfficiency))
-                t.start()
-                threads.append(t)
-                for t in threads:
-                    t.join()
+                transferSingleChunk(udp_socket, tcp_socket, node, folder, file, i, locations[1], transferEfficiency)
+                received_chunks_nr += 1
                 usable = []
                 break
             if i in node_set:
@@ -224,52 +205,67 @@ def calculateDivisionOfChunks(tcp_socket, file, folder, locations: PomboLocation
                     better = better
         divisionOfChunks[better].append(i)
     
-    '''
-    for _ in range(totalChunks):
-        for node, node_set in locations[0]:
-            if node not in divisionOfChunks:
-                divisionOfChunks[node] = []
-
-            available_numbers = node_set - set(divisionOfChunks[node]) - assigned_numbers
-
-            if available_numbers:
-                number = min(available_numbers)
-                divisionOfChunks[node].append(number)
-                assigned_numbers.add(number)
-                break
-    '''
-    
-    return divisionOfChunks
+    return divisionOfChunks, received_chunks_nr
 
 
 # efetuar uma transferência
-def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocations, folder: str, transferEfficiency: TransferEfficiency):
+def handleTransfer(tcp_socket: socket.socket, file_name: str, locations: PomboLocations, folder: str, transferEfficiency: TransferEfficiency):
+    # criar socket udp
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', 0))
+
     # criar o ficheiro
-    with open(folder + "/" + file, 'wb') as f:
+    with open(folder + "/" + file_name, 'wb') as f:
         f.write(b'\0')
         f.flush()
         f.close()
 
+    # calcular nº total de chunks
+    total_chunks = chunkNr(locations)
+
     # calcular divisão de chunks por nodes
     print("- calculating division of chunks...", end = "")
-    divisionOfChunks = calculateDivisionOfChunks(tcp_socket, file, folder, locations, transferEfficiency)
+    divisionOfChunks, received_chunks_nr = calculateDivisionOfChunks(s, tcp_socket, file_name, folder, locations, transferEfficiency, total_chunks)
     print(" done!")
-    
 
-    # criar threads para efetuar o pedido de chunks a cada node
-    threads = list()
-    for node, chunksToTransfer in divisionOfChunks.items():
+    # inicializar estrutura de dados para chunks a processar
+    chunksToProcess = ChunksToProcess()
+
+    # receber chunks em paralelo
+    r = threading.Thread(target=receiveChunks, args=(s, chunksToProcess, total_chunks - received_chunks_nr, transferEfficiency, divisionOfChunks))
+    r.start()
+
+    # pedir chunks aos nodes, de acordo com a divisão calculada
+    for node_name, chunksToTransfer in divisionOfChunks.items():
         if chunksToTransfer != []:
-            t = threading.Thread(target=handleChunkTransfer,
-                                args=(tcp_socket, file, node, chunksToTransfer, locations[1], folder, transferEfficiency))
-            t.start()
-            threads.append(t)
+            # obter ip do node
+            dest_ip = dns.getHostByName(node_name)
 
-    for t in threads:
-        t.join()
+            # enviar call a pedir chunks
+            addr = (dest_ip, UDP_PORT)
+            s.sendto(UDPombo.createCall(chunksToTransfer, file_name), addr)
 
-    print("- transfer succeeded:", file)
-    print("Division of Chunks: ",divisionOfChunks)
+            print("- sent call for chunks:", node_name, "@", dest_ip)
+
+    # inicializar estrutura de dados para chunks a receber e o timeout de cada chunk
+    chunksToReceive = ChunksToReceive(node_name, file_name, list(range(received_chunks_nr, total_chunks)), locations[1], dest_ip, s, transferEfficiency, divisionOfChunks)
+
+    # processar chunks em paralelo
+    p = threading.Thread(target=processReceivedChunk, args=(chunksToProcess, chunksToReceive, folder, file_name, tcp_socket))
+    p.start()
+
+    # esperar que as threads terminem
+    r.join()
+    p.join()
+
+    # cleanup
+    chunksToReceive.destroy()
+    s.close()
+
+    # mensagem de sucesso
+    print("- transfer succeeded:", file_name)
+    # print("Division of Chunks: ",divisionOfChunks)
+
 
 # efetuar o comando "get"
 def handleGet(s: socket.socket, file: str, folder: str, transferEfficiency: TransferEfficiency):
