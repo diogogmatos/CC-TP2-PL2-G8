@@ -74,12 +74,6 @@ def handleCall(conn, availableFiles: AvailableFiles, data: bytes):
     conn.send(TCPombo.createLocationsChirp(MESSAGE))
 
 
-# handle a node being disconnected: remove it from availableFiles
-def handleDisconnect(node: str, availableFiles: AvailableFiles):
-    if (node in availableFiles):
-        availableFiles.removeNode(node)
-
-
 # handle a connection with a node
 def handleNode(conn: socket.socket, ip: str, availableFiles: AvailableFiles):
     hostname = dns.getHostByAddr(ip)
@@ -116,7 +110,7 @@ def handleNode(conn: socket.socket, ip: str, availableFiles: AvailableFiles):
     # close connection
     conn.close()
     # remove node from availableFiles
-    handleDisconnect(hostname, availableFiles)
+    availableFiles.removeNode(hostname)
 
 
 # main function
