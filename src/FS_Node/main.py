@@ -196,8 +196,8 @@ def calculateDivisionOfChunks(tcp_socket, file, folder, locations: PomboLocation
             tranferAverageB = transferEfficiency.getAverageTransferTime(usable[n+1])
             tranferRTTA = transferEfficiency.getSuccessRate(better)
             tranferRTTB = transferEfficiency.getSuccessRate(usable[n+1])
-            mediaA = tranferAverageA * tranferRTTA
-            mediaB =  tranferAverageB * tranferRTTB
+            mediaA = tranferAverageA + ((1-tranferRTTA)*transferAverageA)
+            mediaB =  tranferAverageB +(tranferAverageB *(1- tranferRTTB))
             lenA = len(divisionOfChunks[better])
             lenB = len(divisionOfChunks[usable[n+1]])
             if mediaA < mediaB:
