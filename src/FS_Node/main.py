@@ -243,9 +243,9 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
         f.close()
 
     # calcular divisão de chunks por nodes
-    print("- calculating division of chunks...", end = "")
+    print("- calculating division of chunks...")
     divisionOfChunks = calculateDivisionOfChunks(tcp_socket, file, folder, locations, transferEfficiency)
-    print(" done!")
+    print("- done!")
     
 
     # criar threads para efetuar o pedido de chunks a cada node
@@ -303,6 +303,7 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
         # obter informações do pedido
         file = UDPombo.getFileName(udpombo)
         chunks = UDPombo.getCallData(udpombo)
+        time = UDPombo.getTimestamp(udpombo)
 
         # enviar chunks pedidos
         for chunk_nr in chunks:
@@ -314,7 +315,7 @@ def handleCall(udp_socket: socket.socket, addr: tuple[str, int], folder: str, ud
                 f.close()
 
             # criar mensagem de resposta
-            udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, chunk_data), addr)
+            udp_socket.sendto(UDPombo.createChirp(chunk_nr, file, time, chunk_data), addr)
 
             print("- sent chunk", chunk_nr)
 
@@ -423,7 +424,7 @@ def main():
     # cleanup
     print("\nReceived exit signal. Flying away...")
     # exit signal for udp server
-    socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(UDPombo.createChirp(0, "", b''), ('', UDP_PORT))
+    socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(UDPombo.createChirp(0, "", 0, b''), ('', UDP_PORT))
     # close connection
     tcp_socket.close()
     # stop server

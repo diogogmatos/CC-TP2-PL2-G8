@@ -60,7 +60,7 @@ class UDPombo:
     # create protocol message
 
     @staticmethod
-    def __createUDPombo(chirp: bool, file: str, data: bytes):
+    def __createUDPombo(chirp: bool, file: str, time: int, data: bytes):
         # calculate length
         # length + chirp + timestamp + file name + \0 + data
         l = 4 + 1 + 8 + len(file) + 1 + len(data)
@@ -69,19 +69,19 @@ class UDPombo:
         udpombo = bytearray()
         udpombo.extend(l.to_bytes(4, byteorder="big"))  # length
         udpombo.append(chirp)  # chirp
-        udpombo.extend(round(time.time() * 1000).to_bytes(8, byteorder="big"))  # timestamp (long)
+        udpombo.extend(time.to_bytes(8, byteorder="big"))  # timestamp (long)
         udpombo.extend((file + "\0").encode())  # file name + \0
         udpombo.extend(data)
 
         return udpombo
 
     @staticmethod
-    def createChirp(chunk: int, file: str, data: bytes):
-        return bytes(UDPombo.__createUDPombo(True, file, UDPombo.__toBytesChirp(chunk, data)))
+    def createChirp(chunk: int, file: str, time: int, data: bytes):
+        return bytes(UDPombo.__createUDPombo(True, file, time, UDPombo.__toBytesChirp(chunk, data)))
 
     @staticmethod
     def createCall(chunks: list[int], file: str):
-        return bytes(UDPombo.__createUDPombo(False, file, UDPombo.__toBytesCall(chunks)))
+        return bytes(UDPombo.__createUDPombo(False, file, round(time.time() * 1000), UDPombo.__toBytesCall(chunks)))
 
     # gets
 
