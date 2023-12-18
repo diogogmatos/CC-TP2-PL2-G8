@@ -170,7 +170,10 @@ def calculateDivisionOfChunks(tcp_socket, file, folder, locations: PomboLocation
 
     # caso contrário
     # assigned_numbers = set()
-    
+
+    # Criação da lista atribuição de chunks pelos nodos
+    # Caso não exista informação sobre os nodos no dicionário de Eficiência, estes irão enviar um chunk para se poder avaliar a eficiência dele
+    # E fazer-se o cálculo para o algoritmo
     for i in range(totalChunks):
         usable: set[str] = [] 
         threads = list()
@@ -197,6 +200,10 @@ def calculateDivisionOfChunks(tcp_socket, file, folder, locations: PomboLocation
             divisionOfChunks[usable[0]].append(i)
             continue
 
+        # Algoritmo para a seleção do melhor nodo
+        # Para todos os nodos trabalharem, são enviados mais pacotes aos nodos com melhor conexão e menos para os piores
+        # Peso entre os Nodos: Media de tempo de chegada de mensagem = Tempo de chegada médio + Percentagem de packetloss*Tempo de chegada médio
+        # Distribui-se os chunks pelos nodos para a divisão dos nº de chunks entre os nodos seja igual à divisão dos pesos 
         better = usable[0]
         for n in range(len(usable) - 1):
             transferAverageA = transferEfficiency.getAverageTransferTime(better)
