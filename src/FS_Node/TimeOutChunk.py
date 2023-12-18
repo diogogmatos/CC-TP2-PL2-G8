@@ -4,14 +4,14 @@ import socket
 from src.protocols.UDPombo import UDPombo
 from src.protocols.utils import UDP_PORT, TIMEOUT_TIME, TIMEOUT_LIMIT
 from src.FS_Node.TransferEfficiency import TransferEfficiency
+from src import dns
 
 class TimeOutChunk(threading.Thread):
-    def __init__(self, node_name: str, chunk_nr: int, file_name: str, ip: str, udp_socket: socket.socket, transferEfficiency: TransferEfficiency):
+    def __init__(self, node_name: str, chunk_nr: int, file_name: str, udp_socket: socket.socket, transferEfficiency: TransferEfficiency):
         super().__init__()
         self.node_name = node_name
         self.chunk_nr = chunk_nr
         self.file_name = file_name
-        self.addr = (ip, UDP_PORT)
         self.udp_socket = udp_socket
         self.transferEfficiency = transferEfficiency
         self.interrupt_event = threading.Event()
@@ -22,7 +22,7 @@ class TimeOutChunk(threading.Thread):
         self.interrupt_event.set()
 
     def send_chunk(self):
-        self.udp_socket.sendto(UDPombo.createCall([self.chunk_nr], self.file_name), self.addr)
+        self.udp_socket.sendto(UDPombo.createCall([self.chunk_nr], self.file_name), (dns.getHostByName(self.node_name), UDP_PORT))
 
     def timeout_handler(self):
         print("- timeout on chunk", self.chunk_nr)
