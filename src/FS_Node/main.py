@@ -261,7 +261,6 @@ def handleTransfer(tcp_socket: socket.socket, file: str, locations: PomboLocatio
         t.join()
 
     print("- transfer succeeded:", file)
-    print("Division of Chunks: ",divisionOfChunks)
 
 # efetuar o comando "get"
 def handleGet(s: socket.socket, file: str, folder: str, transferEfficiency: TransferEfficiency):

@@ -2,9 +2,7 @@ import threading
 import socket
 
 from src.FS_Node.TimeOutChunk import TimeOutChunk
-
 from typing import Dict
-
 from src.FS_Node.TransferEfficiency import TransferEfficiency
 
 class ChunksToReceive:
