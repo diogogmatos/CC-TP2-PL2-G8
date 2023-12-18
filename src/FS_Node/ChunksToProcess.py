@@ -1,5 +1,7 @@
 import queue
 
+# Queue já está preparada para uso simultâneo em threads
+
 class ChunksToProcess:
     def __init__(self):
         self.queue: queue.Queue[bytes] = queue.Queue()
