@@ -5,5 +5,5 @@ As a project for the 2023/2024 **Computer Communications** course (**Software En
 # Team
 
 - Diogo Gomes Matos (A100741)
-- José Afonso Lopes Correia (A100610)
-- José Eduardo Silva Monteiro Santos Oliveira (A100547)
+- [José Afonso Lopes Correia](https://github.com/Ze-Limao) (A100610)
+- [José Eduardo Silva Monteiro Santos Oliveira](https://github.com/Wally1906) (A100547)
